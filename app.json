@@ -1,0 +1,15 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f6f5",
+    "disableScroll": true
+  },
+  "permission": {
+    "scope.userLocation": { "desc": "用于在地图中展示你的位置，并支持回到当前位置" }
+  },
+  "requiredPrivateInfos": ["getLocation"],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,66 @@
+.screen { width: 100%; height: 100%; overflow: hidden; }
+.map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.locate { position: absolute; z-index: 3; right: 16px; width: 44px !important; min-width: 44px; max-width: 44px; margin: 0; padding: 0; height: 44px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,.12); transition: bottom 240ms ease-out; }
+.locate.following-drag { transition: none; }
+.locate[disabled] { background: #f6f6f5; }
+.crosshair { position: relative; width: 20px; height: 20px; border: 1.5px solid #202020; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.crosshair::before, .crosshair::after { content: ''; position: absolute; background: #202020; }
+.crosshair::before { width: 1.5px; height: 26px; }
+.crosshair::after { height: 1.5px; width: 26px; }
+.crosshair view { position: relative; z-index: 1; width: 14px; height: 14px; background: #fff; border-radius: 50%; }
+.crosshair view::after { content: ''; position: absolute; top: 5px; left: 5px; width: 4px; height: 4px; background: #202020; border-radius: 50%; }
+.panel { position: absolute; z-index: 2; left: 0; right: 0; background: #fff; border-radius: 22px 22px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -4px 24px rgba(0,0,0,.08); transition: height 240ms cubic-bezier(.16,1,.3,1); }
+.panel.dragging { transition: none; }
+.browse-content, .detail-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.detail-mode .browse-content { display: none; }
+.detail-toolbar { flex-shrink: 0; padding: 8px 12px 0; }
+.back-to-browse { display: inline-flex; gap: 4px; align-items: center; height: 44px; padding: 0 8px; color: #202020; font-size: 14px; background: transparent; border-radius: 8px; }
+.back-to-browse:active { background: #f3f3f1; }
+.detail-scroll { flex: 1; min-height: 0; height: 0; }
+.detail-body { padding: 12px 20px 28px; }
+.detail-title { font-size: 22px; font-weight: 600; line-height: 32px; overflow-wrap: break-word; }
+.detail-meta { margin-top: 8px; font-size: 12px; color: #737373; line-height: 20px; }
+.detail-text { margin-top: 20px; font-size: 16px; line-height: 28px; white-space: pre-wrap; overflow-wrap: break-word; }
+.panel-header { flex-shrink: 0; }
+.drag-zone { padding: 0 16px; }
+.handle-area { height: var(--handle-height, 28px); display: flex; align-items: center; justify-content: center; }
+.handle { width: 36px; height: 4px; background: #c5c5c2; border-radius: 3px; }
+.collapsed .panel-header { padding-bottom: var(--panel-gap, 12px); }
+.collapsed .panel-caption, .collapsed .categories { display: none; }
+.panel-caption { display: flex; justify-content: space-between; align-items: center; font-size: 17px; line-height: 25px; font-weight: 600; }
+.result-count { font-size: 12px; color: #737373; font-weight: 400; }
+.search-row { display: flex; gap: 10px; padding: 0 16px; flex-shrink: 0; }
+.search-box { display: flex; align-items: center; gap: 10px; background: #f3f3f1; padding: 0 12px; border-radius: 12px; height: var(--search-height, 44px); flex: 1; min-width: 0; }
+.search-box input { flex: 1; min-width: 0; font-size: 14px; }
+.placeholder { color: #737373; }
+.clear-search { flex: 0 0 32px; width: 32px !important; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; padding: 0; margin: 0 -8px 0 0; }
+.panel-toggle { flex: 0 0 52px; width: 52px !important; min-width: 52px; max-width: 52px; margin: 0; padding: 0; height: var(--search-height, 44px); background: #f3f3f1; color: #202020; font-size: 13px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.categories { display: flex; gap: 8px; padding: 10px 16px 8px; flex-shrink: 0; }
+.category { padding: 8px 16px; border-radius: 20px; background: #f6f6f5; color: #666; font-size: 13px; }
+.category.active { background: #202020; color: #fff; }
+.category:active, .panel-toggle:active, .locate:active { opacity: .7; }
+.content-scroll { flex: 1; height: 0; min-height: 0; }
+.demo-note { font-size: 11px; color: #737373; padding: 0 20px 8px; }
+.items { padding: 0 20px; }
+.item { padding: 16px 0; border-bottom: 1px solid #ececea; }
+.item:active { background: #f6f6f5; }
+.item-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+.item-category { color: #555; }
+.item-place { color: #737373; }
+.item-title { font-weight: 600; font-size: 19px; margin-top: 9px; line-height: 1.5; }
+.item-text { font-size: 13px; color: #666; line-height: 1.7; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.selected .item-title { text-decoration: underline; text-underline-offset: 4px; }
+.empty { text-align: center; padding: 44px 16px; font-size: 16px; }
+.empty text { display: block; font-size: 13px; color: #737373; margin-top: 10px; }
+.reset-filters { display: inline-block; background: #202020; color: #fff; border-radius: 8px; font-size: 12px; line-height: 40px; margin-top: 18px; padding: 0 18px; }
+.map-error { position: absolute; z-index: 5; left: 16px; right: 16px; background: #fff; padding: 12px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; }
+.map-error button { background: #202020; color: #fff; padding: 8px 14px; border-radius: 8px; }
+.bottom-bar { position: absolute; z-index: 4; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ececea; overflow: visible; --td-tab-bar-active-color: #202020; --td-tab-bar-color: #737373; --td-tab-bar-bg-color: #fff; --td-tab-bar-height: var(--footer-height, 48px); --td-spacer: 0px; }
+.keyboard-open .bottom-bar { display: none; }
+.navigation-bar { height: var(--footer-height, 48px); }
+.navigation-label { font-size: 10px; line-height: 14px; }
+/* 将普通入口略向下居中，缩短文字到手势条的视觉距离，仍保留完整安全区。 */
+.with-home-indicator .navigation-standard { top: 8px; }
+.publish-circle { position: relative; top: -4px; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: #202020; display: flex; align-items: center; justify-content: center; }
+.publish-circle:active { background: #444; }
+@media (prefers-reduced-motion: reduce) { .panel, .locate { transition: none; } }

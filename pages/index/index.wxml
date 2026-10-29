@@ -1,0 +1,56 @@
+<view class="screen {{keyboardHeight ? 'keyboard-open' : ''}}" style="--footer-height: {{layout.footer}}px; --handle-height: {{layout.handle}}px; --search-height: {{layout.search}}px; --panel-gap: {{layout.gap}}px;">
+  <map id="main-map" class="map" latitude="{{latitude}}" longitude="{{longitude}}" scale="{{scale}}" markers="{{markers}}" show-location="{{locationGranted}}" enable-rotate="{{false}}" bindmarkertap="markerTap" bindcallouttap="markerTap" binderror="mapFailed" bindupdated="mapUpdated" />
+
+  <view wx:if="{{mapError}}" class="map-error" style="top: {{topInset}}px;">
+    <text>地图暂时未加载，请检查网络</text>
+    <button bindtap="retryMap">重试</button>
+  </view>
+  <button wx:if="{{!keyboardHeight}}" class="locate {{dragging ? 'following-drag' : ''}}" style="bottom: {{panelBottom + panelHeight + 18}}px;" bindtap="locate" loading="{{locating}}" disabled="{{locating}}" aria-label="回到当前位置"><view wx:if="{{!locating}}" class="crosshair"><view /></view></button>
+
+  <view class="panel {{dragging ? 'dragging' : ''}} {{collapsed ? 'collapsed' : ''}} {{viewMode === 'detail' ? 'detail-mode' : ''}}" style="height: {{panelHeight}}px; bottom: {{panelBottom}}px;">
+    <view class="browse-content">
+    <view class="panel-header">
+      <view class="drag-zone" bindtouchstart="dragStart" catchtouchmove="dragMove" bindtouchend="dragEnd" bindtouchcancel="dragCancel">
+        <view class="handle-area" bindtap="togglePanel" aria-role="button" aria-label="{{collapsed ? '展开内容，也可上拖' : '收起内容，也可下拖'}}"><view class="handle" /></view>
+        <view class="panel-caption"><text>附近内容</text><text class="result-count">{{items.length}} 条</text></view>
+      </view>
+      <view class="search-row">
+        <view class="search-box"><t-icon name="search" size="18px" color="#737373" /><input value="{{query}}" focus="{{searchFocused}}" bindinput="search" bindfocus="searchFocus" bindblur="finishSearch" bindconfirm="confirmSearch" bindkeyboardheightchange="keyboardChanged" adjust-position="{{false}}" maxlength="60" placeholder="搜索示例地点或内容" placeholder-class="placeholder" confirm-type="search" aria-label="搜索示例地点或内容" /><button wx:if="{{query.length}}" class="clear-search" bindtap="clearSearch" aria-label="清空搜索"><t-icon name="close-circle-filled" size="18px" color="#737373" /></button></view>
+        <button class="panel-toggle" bindtap="togglePanel" aria-label="{{collapsed ? '展开列表' : '收起列表'}}">{{collapsed ? '列表' : '收起'}}</button>
+      </view>
+    </view>
+    <view class="categories">
+      <button wx:for="{{categories}}" wx:key="*this" class="category {{activeCategory === item ? 'active' : ''}}" data-category="{{item}}" bindtap="category">{{item}}</button>
+    </view>
+    <scroll-view class="content-scroll" scroll-y="{{!dragging}}" enhanced show-scrollbar="{{false}}" scroll-top="{{scrollTop}}" scroll-into-view="{{scrollIntoView}}" bindscroll="scrolled">
+      <view class="demo-note">示例内容</view>
+      <view wx:if="{{items.length}}" class="items">
+        <view wx:for="{{items}}" wx:key="id" id="point-{{item.id}}" class="item {{selectedId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectItem" aria-role="button" aria-label="查看{{item.title}}">
+          <view class="item-top"><text class="item-category">{{item.category}}</text><text class="item-place">{{item.place}}</text></view>
+          <view class="item-title">{{item.title}}</view>
+          <view class="item-text">{{item.text}}</view>
+        </view>
+      </view>
+      <view wx:else class="empty"><view>没有找到相关示例</view><text>试试其他关键词，或切换分类</text><button class="reset-filters" bindtap="resetFilters">查看全部示例</button></view>
+    </scroll-view>
+    </view>
+    <view wx:if="{{viewMode === 'detail' && selectedItem}}" class="detail-content">
+      <view class="detail-toolbar"><button class="back-to-browse" bindtap="returnToBrowse"><t-icon name="chevron-left" size="18px" /><text>返回浏览</text></button></view>
+      <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="detail-{{selectedId}}">
+        <view class="detail-body" id="detail-{{selectedId}}">
+          <view class="detail-title">{{selectedItem.title}}</view>
+          <view class="detail-meta">{{selectedItem.place}} · {{selectedItem.category}}</view>
+          <view class="detail-text">{{selectedItem.text}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+  <view class="bottom-bar {{safeBottom ? 'with-home-indicator' : ''}}" style="height: {{bottomBarHeight}}px; padding-bottom: {{safeBottom}}px;">
+    <t-tab-bar value="home" fixed="{{false}}" split="{{false}}" bordered="{{false}}" safe-area-inset-bottom="{{false}}" bind:change="navigationTap" t-class="navigation-bar">
+      <t-tab-bar-item wx:for="{{navigation}}" wx:key="id" value="{{item.id}}" icon="{{item.icon || ''}}" aria-label="{{item.label}}{{item.id === 'home' ? '，当前页面' : '，暂未开放'}}" t-class="navigation-item {{item.id === 'publish' ? 'navigation-publish' : 'navigation-standard'}}" custom-style="height: {{item.id === 'publish' ? layout.footer + 8 : layout.footer}}px; margin: {{item.id === 'publish' ? '-8px 0 0' : '0'}}; padding: 0;">
+        <view wx:if="{{item.id === 'publish'}}" slot="icon" class="publish-circle"><t-icon name="add" size="26px" color="#fff" /></view>
+        <text wx:if="{{item.id !== 'publish'}}" class="navigation-label">{{item.label}}</text>
+      </t-tab-bar-item>
+    </t-tab-bar>
+  </view>
+</view>
