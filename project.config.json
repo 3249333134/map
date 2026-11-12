@@ -1,6 +1,7 @@
 {
-  "description": "参考 map_q 精简的地图和可滑动区域",
+  "description": "微信云开发地图社交小程序",
   "miniprogramRoot": "./",
+  "cloudfunctionRoot": "cloudfunctions/",
   "compileType": "miniprogram",
   "appid": "wx50620cbb41dfd21b",
   "projectname": "map-simple",
@@ -38,6 +39,58 @@
       },
       {
         "value": "package.json",
+        "type": "file"
+      },
+      {
+        "value": "cloudfunctions",
+        "type": "folder"
+      },
+      {
+        "value": "deployment",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": ".local",
+        "type": "folder"
+      },
+      {
+        "value": ".agents",
+        "type": "folder"
+      },
+      {
+        "value": ".codex",
+        "type": "folder"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "README.md",
+        "type": "file"
+      },
+      {
+        "value": "PRODUCT.md",
+        "type": "file"
+      },
+      {
+        "value": "DESIGN.md",
+        "type": "file"
+      },
+      {
+        "value": ".env",
+        "type": "file"
+      },
+      {
+        "value": ".env.local",
         "type": "file"
       }
     ],

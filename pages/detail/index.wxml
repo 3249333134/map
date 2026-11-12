@@ -1,0 +1,1 @@
+<view class="page"><button class="secondary" bindtap="back">返回浏览</button><view wx:if="{{loading}}" class="muted section">正在加载…</view><view wx:if="{{error}}" class="error">{{error}}<button class="secondary" bindtap="load">重试</button></view><content-detail wx:if="{{item}}" item="{{item}}" bindchanged="changed" bindremoved="removed" /></view>

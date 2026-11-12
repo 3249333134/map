@@ -2,12 +2,19 @@
   "name": "map-simple",
   "version": "1.0.0",
   "private": true,
-  "description": "微信原生小程序：沉浸地图与两档浏览面板",
+  "description": "微信云开发地图社交小程序：动态、活动与附近互动",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "check:wxml": "node scripts/check-wxml.js",
+    "cloud:prepare": "node scripts/prepare-cloud.js",
+    "cloud:init": "node scripts/init-cloud.js",
+    "smoke": "node scripts/runtime-smoke.js"
   },
   "dependencies": {
     "tdesign-miniprogram": "1.17.0"
+  },
+  "devDependencies": {
+    "@cloudbase/manager-node": "5.9.4"
   }
 }

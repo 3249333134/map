@@ -1,6 +1,7 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 let definition
+require('../config/cloud').demoMode = true
 global.Page = page => { definition = page }
 const defaultWindow = { windowHeight: 800, screenHeight: 850, safeArea: { bottom: 830 } }
 global.wx = { getWindowInfo: () => defaultWindow, hideKeyboard: () => {} }
@@ -132,14 +133,14 @@ test('错误提示避开顶部胶囊，尺寸变化时终止旧手势', () => {
     assert.equal(instance.data.dragging, false)
   } finally { delete wx.getMenuButtonBoundingClientRect }
 })
-test('底栏首页无跳转，其余入口显示对应未开放提示，保留地图状态', () => {
-  const notifications = []
-  wx.showToast = options => notifications.push(options)
+test('底栏进入四个真实功能页，保留地图浏览状态', () => {
+  const urls = []
+  global.getCurrentPages = () => [{ route: 'pages/index/index' }]
+  wx.navigateTo = options => urls.push(options.url)
   const instance = page()
   const before = structuredClone(instance.data)
   for (const id of ['home', 'service', 'publish', 'message', 'profile']) instance.navigationTap({ detail: { value: id } })
-  assert.deepEqual(notifications.map(item => item.title), ['服务暂未开放', '发布暂未开放', '消息暂未开放', '我的暂未开放'])
-  assert.ok(notifications.every(item => item.icon === 'none'))
+  assert.deepEqual(urls, ['/pages/activities/index', '/pages/publish/index', '/pages/notifications/index', '/pages/me/index'])
   assert.deepEqual(instance.data, before)
 })
 test('键盘开启时面板位于键盘上方，关闭后保持结果展开', () => {

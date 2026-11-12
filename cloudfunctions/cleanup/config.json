@@ -1,0 +1,1 @@
+{ "triggers": [{ "name": "cleanup-and-notifications", "type": "timer", "config": "0 */10 * * * * *" }], "timeout": 60 }

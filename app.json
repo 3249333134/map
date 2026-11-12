@@ -1,15 +1,15 @@
 {
-  "pages": ["pages/index/index"],
+  "pages": ["pages/index/index", "pages/activities/index", "pages/publish/index", "pages/notifications/index", "pages/me/index", "pages/detail/index", "pages/about/index", "pages/admin/index"],
   "window": {
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f6f6f5",
-    "disableScroll": true
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f6f6f5"
   },
   "permission": {
-    "scope.userLocation": { "desc": "用于在地图中展示你的位置，并支持回到当前位置" }
+    "scope.userLocation": { "desc": "用于定位到当前位置、选择你确认的公开地点，并展示附近内容" }
   },
-  "requiredPrivateInfos": ["getLocation"],
+  "requiredPrivateInfos": ["getLocation", "chooseLocation"],
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

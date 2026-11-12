@@ -1,0 +1,6 @@
+{
+  "api": { "invoke": "auth != null" },
+  "moderationCallback": { "invoke": false },
+  "cleanup": { "invoke": false },
+  "*": { "invoke": false }
+}

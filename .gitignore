@@ -1,3 +1,7 @@
 node_modules/
 project.private.config.json
 npm-debug.log*
+.local/
+.env
+.env.*
+!.env.example
