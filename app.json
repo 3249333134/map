@@ -1,10 +1,10 @@
 {
-  "pages": ["pages/index/index", "pages/activities/index", "pages/publish/index", "pages/notifications/index", "pages/me/index", "pages/detail/index", "pages/about/index", "pages/admin/index"],
+  "pages": ["pages/index/index", "pages/activities/index", "pages/publish/index", "pages/notifications/index", "pages/me/index", "pages/avatar/index", "pages/detail/index", "pages/about/index", "pages/admin/index"],
   "window": {
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f6f6f5"
+    "navigationBarBackgroundColor": "#f4f4f2",
+    "backgroundColor": "#f4f4f2"
   },
   "permission": {
     "scope.userLocation": { "desc": "用于定位到当前位置、选择你确认的公开地点，并展示附近内容" }

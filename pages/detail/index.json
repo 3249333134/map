@@ -1,1 +1,1 @@
-{ "navigationStyle": "default", "navigationBarTitleText": "内容", "disableScroll": false, "usingComponents": { "content-detail": "/components/content-detail/index" } }
+{ "navigationStyle": "default", "navigationBarTitleText": "内容", "disableScroll": false, "usingComponents": { "content-detail": "/components/content-detail/index", "t-icon": "tdesign-miniprogram/icon/icon" } }

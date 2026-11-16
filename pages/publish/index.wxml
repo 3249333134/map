@@ -1,1 +1,62 @@
-<view class="page"><block wx:if="{{!submitted}}"><view class="heading">分享此刻，约在附近</view><view class="tabs"><button class="{{kind === 'post' ? 'active' : ''}}" data-kind="post" bindtap="kind" disabled="{{busy}}">发动态</button><button class="{{kind === 'activity' ? 'active' : ''}}" data-kind="activity" bindtap="kind" disabled="{{busy}}">发活动</button></view><view class="muted">公开你选择的地点，不会持续公开实时位置。文字草稿自动保存在本机。</view><view class="field"><text class="label">{{kind === 'activity' ? '活动名称（必填）' : '标题（选填）'}}</text><input value="{{title}}" maxlength="40" data-field="title" bindinput="field" disabled="{{busy}}" placeholder="一句话说清楚" /></view><view class="field"><text class="label">{{kind === 'activity' ? '活动说明' : '正文'}}（必填）</text><textarea value="{{text}}" maxlength="2000" data-field="text" bindinput="field" disabled="{{busy}}" placeholder="写下你想分享的内容" /></view><view class="field"><picker range="{{categories}}" bindchange="category" disabled="{{busy}}"><view class="picker">分类：{{category}}</view></picker></view><button class="secondary" bindtap="choosePlace" disabled="{{busy}}">{{location ? location.place : '选择公开地点（必填）'}}</button><view class="section pictures"><view wx:for="{{photos}}" wx:key="path" class="photo"><image src="{{item.path}}" mode="aspectFill" /><button data-index="{{index}}" bindtap="removePhoto" disabled="{{busy}}">移除</button></view></view><button wx:if="{{photos.length < 9}}" class="secondary" bindtap="choosePhotos" disabled="{{busy}}">添加图片 {{photos.length}} / 9</button><block wx:if="{{kind === 'activity'}}"><view class="inline"><view class="field"><text class="label">开始日期</text><picker mode="date" value="{{date}}" data-field="date" bindchange="field" disabled="{{busy}}"><view class="picker">{{date || '选择日期'}}</view></picker></view><view class="field"><text class="label">开始时间</text><picker mode="time" value="{{startTime}}" data-field="startTime" bindchange="field" disabled="{{busy}}"><view class="picker">{{startTime || '选择时间'}}</view></picker></view></view><view class="inline"><view class="field"><text class="label">结束日期</text><picker mode="date" value="{{endDate}}" data-field="endDate" bindchange="field" disabled="{{busy}}"><view class="picker">{{endDate || '选择日期'}}</view></picker></view><view class="field"><text class="label">结束时间</text><picker mode="time" value="{{endTime}}" data-field="endTime" bindchange="field" disabled="{{busy}}"><view class="picker">{{endTime || '选择时间'}}</view></picker></view></view><view class="field"><text class="label">报名上限（1–100 人）</text><input type="number" value="{{capacity}}" data-field="capacity" bindinput="field" disabled="{{busy}}" /></view></block><view wx:if="{{error}}" class="error">{{error}}</view><view wx:if="{{progress}}" class="status section">{{progress}}</view><button class="primary" bindtap="submit" loading="{{busy}}" disabled="{{busy}}">提交发布</button><view class="muted section">通过审核后才会公开。审核中可在“我的”查看。</view></block><block wx:else><view class="heading">{{submitted.status === 'published' ? '发布成功' : '内容已提交'}}</view><view class="muted">{{submitted.status === 'published' ? '现在可以在地图或附近活动里查看。' : '审核通过后会公开；若审核异常，可在详情中重试。'}}</view><button class="primary" bindtap="view">查看内容状态</button><button class="secondary" bindtap="back">返回浏览</button></block></view>
+<view class="page">
+  <block wx:if="{{!submitted}}">
+    <view class="hero">
+      <view class="hero-title">分享此刻，约在附近</view>
+      <view class="hero-copy">公开你选择的地点，不会持续公开实时位置。文字草稿自动保存在本机。</view>
+      <view class="segmented">
+        <button class="{{kind === 'post' ? 'active' : ''}}" data-kind="post" bindtap="kind" disabled="{{busy}}">发动态</button>
+        <button class="{{kind === 'activity' ? 'active' : ''}}" data-kind="activity" bindtap="kind" disabled="{{busy}}">发活动</button>
+      </view>
+    </view>
+
+    <view class="card section">
+      <view class="card-title">{{kind === 'activity' ? '活动内容' : '动态内容'}}</view>
+      <view class="field"><text class="label">{{kind === 'activity' ? '活动名称（必填）' : '标题（选填）'}}</text><input value="{{title}}" maxlength="40" data-field="title" bindinput="field" disabled="{{busy}}" placeholder="一句话说清楚" /></view>
+      <view class="field"><text class="label">{{kind === 'activity' ? '活动说明' : '正文'}}（必填）</text><textarea value="{{text}}" maxlength="2000" data-field="text" bindinput="field" disabled="{{busy}}" placeholder="写下你想分享的内容" /></view>
+      <picker range="{{categories}}" bindchange="category" disabled="{{busy}}">
+        <view class="picker-row"><text>分类</text><view class="picker-value">{{category}}<t-icon name="chevron-right" size="16px" color="#a0a098" /></view></view>
+      </picker>
+    </view>
+
+    <view class="card section">
+      <view class="card-title">地点</view>
+      <button class="place-row {{location ? 'picked' : ''}}" bindtap="choosePlace" disabled="{{busy}}">
+        <view class="place-icon"><t-icon name="location" size="18px" color="{{location ? '#55663f' : '#8a8a82'}}" /></view>
+        <view class="place-copy"><text class="place-name">{{location ? location.place : '选择公开地点（必填）'}}</text><text class="place-hint">{{location ? '仅公开这个地点' : '只公开你确认的位置'}}</text></view>
+        <t-icon name="chevron-right" size="16px" color="#a0a098" />
+      </button>
+    </view>
+
+    <view class="card section">
+      <view class="card-title">图片 <text class="count">{{photos.length}} / 9</text></view>
+      <view class="photo-grid">
+        <view wx:for="{{photos}}" wx:key="path" class="photo-tile"><image src="{{item.path}}" mode="aspectFill" /><button class="remove" data-index="{{index}}" bindtap="removePhoto" disabled="{{busy}}" aria-label="移除图片">×</button></view>
+        <button wx:if="{{photos.length < 9}}" class="photo-add" bindtap="choosePhotos" disabled="{{busy}}"><t-icon name="add" size="22px" color="#8a8a82" /><text>添加图片</text></button>
+      </view>
+      <view wx:if="{{demoMode}}" class="muted photo-hint">演示模式下图片只保存在本机，不会上传云端。</view>
+    </view>
+
+    <block wx:if="{{kind === 'activity'}}">
+      <view class="card section">
+        <view class="card-title">活动时间</view>
+        <view class="inline"><view class="field"><text class="label">开始日期</text><picker mode="date" value="{{date}}" data-field="date" bindchange="field" disabled="{{busy}}"><view class="picker">{{date || '选择日期'}}</view></picker></view><view class="field"><text class="label">开始时间</text><picker mode="time" value="{{startTime}}" data-field="startTime" bindchange="field" disabled="{{busy}}"><view class="picker">{{startTime || '选择时间'}}</view></picker></view></view>
+        <view class="inline"><view class="field"><text class="label">结束日期</text><picker mode="date" value="{{endDate}}" data-field="endDate" bindchange="field" disabled="{{busy}}"><view class="picker">{{endDate || '选择日期'}}</view></picker></view><view class="field"><text class="label">结束时间</text><picker mode="time" value="{{endTime}}" data-field="endTime" bindchange="field" disabled="{{busy}}"><view class="picker">{{endTime || '选择时间'}}</view></picker></view></view>
+        <view class="field"><text class="label">报名上限（1–100 人）</text><input type="number" value="{{capacity}}" data-field="capacity" bindinput="field" disabled="{{busy}}" /></view>
+      </view>
+    </block>
+
+    <view wx:if="{{error}}" class="error">{{error}}</view>
+    <view wx:if="{{progress}}" class="progress-note">{{progress}}</view>
+    <button class="primary submit" bindtap="submit" loading="{{busy}}" disabled="{{busy}}">提交发布</button>
+    <view class="muted submit-hint">演示模式会立即发布并保存在本机；正式环境需审核通过后公开。</view>
+  </block>
+  <block wx:else>
+    <view class="success-card">
+      <view class="success-mark"><t-icon name="check" size="26px" color="#fff" /></view>
+      <view class="success-title">{{submitted.status === 'published' ? '发布成功' : '内容已提交'}}</view>
+      <view class="muted">{{submitted.status === 'published' ? '现在可以在地图或附近活动里查看。' : '审核通过后会公开；若审核异常，可在详情中重试。'}}</view>
+      <button class="primary" bindtap="view">查看内容</button>
+      <button class="secondary" bindtap="back">返回浏览</button>
+    </view>
+  </block>
+</view>

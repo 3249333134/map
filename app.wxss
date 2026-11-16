@@ -1,4 +1,7 @@
-page { height: 100%; background: #f6f6f5; color: #202020; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 28rpx; }
-view, scroll-view, input, button { box-sizing: border-box; }
-button { margin: 0; padding: 0; font-size: inherit; line-height: inherit; border-radius: 0; }
+page { height: 100%; background: #f4f4f2; color: #1c1c1a; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; font-size: 28rpx; -webkit-font-smoothing: antialiased; }
+view, scroll-view, input, textarea, button { box-sizing: border-box; }
+button { width: auto; margin: 0; padding: 0; font-size: inherit; line-height: inherit; border-radius: 0; background: transparent; }
+/* 微信原生 button 默认 184px 宽，需要同优先级覆盖，再按类名单独指定满宽。 */
+button:not([size]) { width: auto; }
 button::after { border: 0; }
+image { display: block; }

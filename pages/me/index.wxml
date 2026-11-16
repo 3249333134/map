@@ -1,40 +1,76 @@
 <view class="page">
-  <view class="heading">我的 Cos 形象</view>
-  <view class="muted">用一个角色形象，让附近同好认出你。</view>
-  <view class="field"><text class="label">昵称</text><input value="{{nickname}}" bindinput="input" maxlength="20" placeholder="填写昵称" /></view>
-  <view class="field"><text class="label">角色与兴趣（最多 5 个）</text><input value="{{tagsText}}" bindinput="tagsInput" maxlength="60" placeholder="原神、约拍、逛展" /></view>
-  <view class="field"><text class="label">选择一个形象</text><view class="avatar-grid">
-    <view wx:for="{{avatarOptions}}" wx:key="id" class="avatar-option {{avatarKey === item.id && !avatarPhoto ? 'avatar-selected' : ''}}" data-id="{{item.id}}" bindtap="chooseAvatar" aria-role="button" aria-label="选择{{item.name}}形象"><image src="/static/avatars/{{item.id}}.png" mode="aspectFill" /><text>{{item.name}}</text></view>
-  </view></view>
-  <view wx:if="{{avatarPhoto}}" class="chosen-photo"><image src="{{avatarPhoto.path}}" mode="aspectFill" /><text>已选 Cos 照片，保存后进行审核</text></view>
-  <button class="secondary photo-button" bindtap="chooseAvatarPhoto" disabled="{{saving}}">{{avatarPhoto ? '重新选择 Cos 照片' : '上传自己的 Cos 照片'}}</button>
-  <view wx:if="{{profile.avatarReviewStatus === 'pending'}}" class="status section">头像审核中，审核通过后会显示在公开地图上</view>
-  <view wx:if="{{profile.avatarReviewStatus === 'review' || profile.avatarReviewStatus === 'rejected' || profile.avatarReviewStatus === 'review_error'}}" class="status section">这张照片暂不能公开，请改选内置形象或换一张照片</view>
-  <button class="primary" bindtap="save" disabled="{{saving || !nickname}}" loading="{{saving}}">保存形象</button>
+  <view class="profile-hero">
+    <image class="profile-hero-avatar" src="{{avatarUrl ? avatarUrl : '/static/avatars/' + avatarKey + '.png'}}" mode="aspectFill" />
+    <view class="profile-hero-info">
+      <view class="profile-hero-name">{{nickname || '设置你的 Cos 形象'}}</view>
+      <view class="profile-hero-tags">{{tagsText || '添加角色与兴趣，让同好认出你'}}</view>
+    </view>
+    <view wx:if="{{presence && presence.active}}" class="online-pill">地图出现中</view>
+  </view>
 
-  <view class="map-presence">
+  <view class="card section">
+    <view class="card-title">资料</view>
+    <view class="field"><text class="label">昵称</text><input value="{{nickname}}" bindinput="input" maxlength="20" placeholder="填写昵称" /></view>
+    <view class="field"><text class="label">角色与兴趣（最多 5 个）</text><input value="{{tagsText}}" bindinput="tagsInput" maxlength="60" placeholder="原神、约拍、逛展" /></view>
+    <view class="field"><text class="label">选择一个形象</text><view class="avatar-grid">
+      <view wx:for="{{avatarOptions}}" wx:key="id" class="avatar-option {{avatarKey === item.id && !avatarUrl ? 'avatar-selected' : ''}}" data-id="{{item.id}}" bindtap="chooseAvatar" aria-role="button" aria-label="选择{{item.name}}形象"><image src="/static/avatars/{{item.id}}.png" mode="aspectFill" /><text>{{item.name}}</text></view>
+    </view></view>
+    <view wx:if="{{avatarUrl}}" class="chosen-photo"><image src="{{avatarUrl}}" mode="aspectFill" /><view class="chosen-copy"><view class="chosen-title">AI 生成的动漫形象</view><text>你生成的原创角色已启用</text></view></view>
+    <view class="avatar-actions">
+      <button class="secondary" bindtap="aiAvatar" disabled="{{saving}}">生成专属动漫形象</button>
+    </view>
+    <view wx:if="{{profile.avatarReviewStatus === 'pending'}}" class="status section">头像审核中，审核通过后会显示在公开地图上</view>
+    <view wx:if="{{profile.avatarReviewStatus === 'review' || profile.avatarReviewStatus === 'rejected' || profile.avatarReviewStatus === 'review_error'}}" class="status section">这张照片暂不能公开，请改选内置形象或换一张照片</view>
+    <button class="primary" bindtap="save" disabled="{{saving || !nickname}}" loading="{{saving}}">保存形象</button>
+  </view>
+
+  <view class="card section">
     <view class="presence-heading">出现在附近地图</view>
-    <view class="muted">默认显示你主动选定的地点；当前位置只在本次开启后显示 2 小时，不会后台追踪。</view>
-    <view class="presence-modes"><button class="mode-button {{presenceMode === 'place' ? 'mode-active' : ''}}" data-mode="place" bindtap="selectPresenceMode">选定地点</button><button class="mode-button {{presenceMode === 'current' ? 'mode-active' : ''}}" data-mode="current" bindtap="selectPresenceMode">当前位置</button></view>
-    <button wx:if="{{presenceMode === 'place'}}" class="secondary choose-place" bindtap="choosePresencePlace">{{presencePlace ? presencePlace.place : '选择公开地点'}}</button>
-    <button wx:else class="secondary choose-place" bindtap="useCurrentLocation">{{presencePlace ? presencePlace.place : '获取一次当前位置'}}</button>
+    <view class="muted">你的形象只在开启后显示。可选手动虚拟移动，或以约 500 米模糊精度跟随真实位置。</view>
+    <view class="movement-modes"><button class="mode-button {{movementMode === 'stationary' ? 'mode-active' : ''}}" data-mode="stationary" bindtap="selectMovementMode">固定位置</button><button class="mode-button {{movementMode === 'virtual' ? 'mode-active' : ''}}" data-mode="virtual" bindtap="selectMovementMode">点击地图行走</button><button class="mode-button {{movementMode === 'fuzzy' ? 'mode-active' : ''}}" data-mode="fuzzy" bindtap="selectMovementMode">模糊跟随</button></view>
+    <view wx:if="{{movementMode === 'fuzzy'}}" class="fuzzy-note">仅在小程序前台每 30 秒检查一次位置；发送到地图的是约 500 米网格中心，不上传精确坐标。</view>
+    <block wx:if="{{movementMode !== 'fuzzy'}}">
+      <view class="presence-modes"><button class="mode-button {{presenceMode === 'place' ? 'mode-active' : ''}}" data-mode="place" bindtap="selectPresenceMode">选定地点</button><button class="mode-button {{presenceMode === 'current' ? 'mode-active' : ''}}" data-mode="current" bindtap="selectPresenceMode">当前位置</button></view>
+      <button wx:if="{{presenceMode === 'place'}}" class="secondary choose-place" bindtap="choosePresencePlace">{{presencePlace ? presencePlace.place : '选择公开地点'}}</button>
+      <button wx:else class="secondary choose-place" bindtap="useCurrentLocation">{{presencePlace ? presencePlace.place : '获取一次当前位置'}}</button>
+    </block>
     <view class="field presence-shout"><text class="label">附近喊话（选填）</text><input value="{{presenceShout}}" bindinput="presenceShoutInput" maxlength="80" placeholder="今天出的是哪个角色？想认识什么同好？" /></view>
-    <view wx:if="{{presence && presence.expiresAt > 0}}" class="presence-status">地图出现中 · {{presence.place}}<text>，2 小时后自动结束</text></view>
+    <view wx:if="{{presence && presence.expiresAt > 0}}" class="presence-status">地图出现中 · {{presence.movementMode === 'fuzzy' ? '约500米模糊跟随' : presence.movementMode === 'virtual' ? '虚拟漫游' : presence.place}}<text>，2 小时后自动结束</text></view>
     <button wx:if="{{presence && presence.active}}" class="primary" bindtap="activatePresence" loading="{{presenceBusy}}" disabled="{{presenceBusy}}">更新位置与喊话</button>
     <button wx:if="{{presence && presence.active}}" class="secondary" bindtap="stopPresence" loading="{{presenceBusy}}" disabled="{{presenceBusy}}">停止地图出现</button>
     <button wx:if="{{!presence || !presence.active}}" class="primary" bindtap="activatePresence" loading="{{presenceBusy}}" disabled="{{presenceBusy}}">开启地图出现</button>
   </view>
 
+  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="load">重试</button></view>
+
+  <block wx:if="{{profile}}">
+    <view class="section">
+      <view class="section-heading">我的记录</view>
+      <scroll-view class="tabs-scroll" scroll-x enhanced show-scrollbar="{{false}}"><view class="tabs"><button wx:for="{{tabs}}" wx:key="id" class="{{section === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="tab">{{item.label}}</button></view></scroll-view>
+      <block wx:if="{{section === 'friends'}}">
+        <view wx:for="{{items}}" wx:key="id" class="friend-row card">
+          <image src="{{item.avatarUrl || '/static/avatars/' + item.avatarKey + '.png'}}" mode="aspectFill" />
+          <view class="friend-copy"><view class="row-title">{{item.nickname}}</view><view class="muted">{{item.tags && item.tags.length ? item.tags.join(' · ') : '已成为好友'}}</view></view>
+          <text class="friend-chip">好友</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view wx:for="{{items}}" wx:key="id" class="record-card" bindtap="open" data-id="{{item.id}}" aria-role="button">
+          <view class="record-top"><text class="record-kind">{{item.kind === 'activity' ? '活动' : '动态'}}</text><text class="record-status">{{item.statusText}}{{item.cancelled ? ' · 已取消' : ''}}</text></view>
+          <view class="row-title">{{item.title}}</view>
+          <view class="muted">{{item.place}}</view>
+        </view>
+      </block>
+      <view wx:if="{{!items.length && !loading && !error}}" class="empty-card">
+        <view class="empty-title">{{section === 'friends' ? '还没有好友' : '还没有相关记录'}}</view>
+        <view class="empty-copy">{{section === 'friends' ? '去附近地图认识同好吧。' : '发布动态或报名活动后会显示在这里。'}}</view>
+      </view>
+      <button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多记录</button>
+    </view>
+  </block>
+
   <button class="secondary section" bindtap="about">隐私说明与反馈</button>
   <button wx:if="{{profile.isAdmin}}" class="secondary" bindtap="admin">内容与举报管理</button>
-  <view wx:if="{{error}}" class="error">{{error}}<button class="secondary" bindtap="load">重试</button></view>
-  <block wx:if="{{profile}}">
-    <view class="tabs section"><button wx:for="{{tabs}}" wx:key="id" class="{{section === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="tab">{{item.label}}</button></view>
-    <block wx:if="{{section === 'friends'}}"><view wx:for="{{items}}" wx:key="id" class="friend-row"><image src="{{item.avatarUrl || '/static/avatars/' + item.avatarKey + '.png'}}" mode="aspectFill" /><view><view class="row-title">{{item.nickname}}</view><view class="muted">已成为好友</view></view></view></block>
-    <block wx:else><view wx:for="{{items}}" wx:key="id" class="row" bindtap="open" data-id="{{item.id}}" aria-role="button"><view class="row-title">{{item.title}}</view><view class="muted">{{item.place}}</view><view class="status">{{item.statusText}} {{item.cancelled ? '· 已取消' : ''}}</view></view></block>
-    <view wx:if="{{!items.length && !loading && !error}}" class="muted section">{{section === 'friends' ? '还没有好友，去附近地图认识同好吧。' : '还没有相关记录'}}</view>
-    <button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多记录</button>
-  </block>
   <view wx:if="{{loading}}" class="muted section">正在加载…</view>
 </view>
 <bottom-nav selected="profile" />

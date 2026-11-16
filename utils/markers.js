@@ -11,13 +11,13 @@ function markersFor(items, selectedId) {
   })
 }
 const avatarKeys = ['mika', 'sora', 'rin', 'luna', 'yuki', 'kira']
-function cosplayerMarkersFor(items, selectedId) {
+function cosplayerMarkersFor(items, selectedId, frame = 0) {
   return items.map((item, index) => {
     const selected = item.id === selectedId
     const key = avatarKeys.includes(item.avatar?.avatarKey) ? item.avatar.avatarKey : avatarKeys[index % avatarKeys.length]
     return {
       id: item.markerId || index + 1, latitude: item.latitude, longitude: item.longitude,
-      iconPath: item.avatarPath || `/static/avatars/${key}.png`, width: selected ? 46 : 40, height: selected ? 46 : 40,
+      iconPath: item.avatarFramePaths?.[frame] || item.avatarPath || item.avatar?.avatarUrl || `/static/chibi/${key}-${frame}.png`, width: selected ? 48 : 42, height: selected ? 58 : 52,
       anchor: { x: 0.5, y: 0.5 }, zIndex: selected ? 10 : 2,
       callout: { content: item.avatar?.nickname || '附近的 Cos', display: selected ? 'ALWAYS' : 'BYCLICK', color: '#202020', bgColor: '#ffffff', fontSize: 12, padding: 8, borderRadius: 12 }
     }

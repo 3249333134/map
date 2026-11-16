@@ -15,8 +15,9 @@ function location(value) {
 function presenceInput(input) {
   const point = location(input)
   const mode = input.mode === 'current' ? 'current' : 'place'
+  const movementMode = ['virtual', 'fuzzy'].includes(input.movementMode) ? input.movementMode : 'stationary'
   const shout = text(input.shout, 80)
-  return { ...point, mode, shout }
+  return { ...point, mode, movementMode, shout }
 }
 function contentInput(input, now) {
   const kind = input.kind === 'activity' ? 'activity' : 'post'

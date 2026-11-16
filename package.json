@@ -9,6 +9,8 @@
     "check:wxml": "node scripts/check-wxml.js",
     "cloud:prepare": "node scripts/prepare-cloud.js",
     "cloud:init": "node scripts/init-cloud.js",
+    "avatar-server": "server/.venv/bin/python server/generate_server.py --port 8765",
+    "avatar-setup": "python3 -m venv server/.venv && server/.venv/bin/pip install -r server/requirements.txt",
     "smoke": "node scripts/runtime-smoke.js"
   },
   "dependencies": {

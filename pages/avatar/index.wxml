@@ -1,0 +1,31 @@
+<view class="avatar-page">
+  <view class="hero-card">
+    <view class="hero-top"><view class="eyebrow">AI PIXEL SPRITE STUDIO</view><view class="hero-title">生成可动像素小人</view><view class="hero-copy">输入作品与角色名，或上传图片作为参考</view></view>
+    <view class="preview-frame" bindtap="previewImage">
+      <image wx:if="{{frames.length}}" class="preview-image pixelated" src="{{frames[frameIndex]}}" mode="aspectFit" />
+      <view wx:elif="{{generating}}" class="preview-empty"><view class="loader"></view><text>正在绘制角色…</text></view>
+      <view wx:else class="preview-empty"><view class="sparkle">✦</view><text>生成的四帧动作会在这里循环播放</text></view>
+      <view wx:if="{{frames.length}}" class="preview-badge">4 帧动作预览</view>
+    </view>
+  </view>
+
+  <view class="card section">
+    <view class="section-title">选择像素风格</view>
+    <view class="style-list">
+      <view wx:for="{{styles}}" wx:key="id" class="style-option {{style === item.id ? 'style-selected' : ''}}" data-id="{{item.id}}" bindtap="selectStyle">
+        <view class="style-dot" style="background: {{item.color}}"></view>
+        <view class="style-copy"><text class="style-name">{{item.name}}</text><text class="style-hint">{{item.hint}}</text></view>
+        <view class="style-check">{{style === item.id ? '✓' : ''}}</view>
+      </view>
+    </view>
+    <view class="field prompt-field"><view class="label">作品 / IP 名称</view><input value="{{franchise}}" bindinput="inputFranchise" maxlength="60" placeholder="例如：海贼王、EVA、原神" /></view>
+    <view class="field prompt-field"><view class="label">角色名称</view><input value="{{character}}" bindinput="inputCharacter" maxlength="60" placeholder="例如：路飞、初号机驾驶员、甘雨" /></view>
+    <view class="field prompt-field"><view class="label">补充设定 <text class="optional">选填</text></view><textarea value="{{prompt}}" bindinput="inputPrompt" maxlength="120" placeholder="例如：保留标志性发型和配色，做成全身站立像素小人" /></view>
+    <view class="upload-row"><view class="label">或上传角色参考图</view><button wx:if="{{!referencePath}}" class="upload-button" bindtap="chooseReference">＋ 选择图片</button><view wx:else class="reference-preview"><image src="{{referencePath}}" mode="aspectFill" /><text>参考图已添加</text><text class="remove-reference" bindtap="removeReference">移除</text></view></view>
+    <button class="generate-button" bindtap="generate" loading="{{generating}}" disabled="{{generating}}"><text>✦</text> 生成四帧像素动作</button>
+    <text class="cost-note">云端生成会消耗 Agnes AI 额度；保存后还需到“我的”开启地图出现，才会显示在地图上。</text>
+  </view>
+
+  <view wx:if="{{error}}" class="error-card">{{error}}</view>
+  <view class="footer"><button class="save-button" bindtap="save" loading="{{saving}}" disabled="{{saving || !frames.length}}">使用这个形象</button></view>
+</view>

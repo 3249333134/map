@@ -1,1 +1,9 @@
 @import '../../styles/pages.wxss';
+
+.detail-page { min-height: 100vh; padding: 0 0 40px; background: #fff; }
+.detail-bar { padding: 6px 12px 0; }
+.detail-back { display: inline-flex; align-items: center; gap: 3px; height: 40px; padding: 0 10px 0 4px; border-radius: 10px; color: #1c1c1a; font-size: 13px; line-height: 40px; }
+.detail-back:active { background: #f4f4f2; }
+.muted.section { padding: 20px; }
+.error { margin: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+.error .retry { flex: 0 0 auto; padding: 0 12px; border-radius: 9px; background: #fff; color: #8a4a3a; font-size: 12px; line-height: 30px; }

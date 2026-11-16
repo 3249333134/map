@@ -10,14 +10,18 @@ function page(file) {
   const instance = { ...definition, data: structuredClone(definition.data), setData(patch, callback) { Object.assign(this.data, patch); if (callback) callback() } }
   return instance
 }
-test('未配置与断网明确报错，不回退到示例；演示写入被拒绝', async () => {
+test('未配置与断网明确报错，不回退到示例；演示模式可在本机走通写入', async () => {
   config.demoMode = false; config.envId = ''
   await assert.rejects(api.request('feed'), { code: 'CLOUD_NOT_CONFIGURED' })
   config.envId = 'test-only'
   global.wx = { cloud: { callFunction: async () => { throw new Error('offline') } } }
   await assert.rejects(api.request('feed'), { code: 'NETWORK' })
   config.demoMode = true
-  await assert.rejects(api.request('content.create', {}), { code: 'DEMO_READONLY' })
+  const created = await api.request('content.create', { kind: 'post', title: '演示写入', text: '只保存在本机', category: '日常', latitude: 30.65, longitude: 104.06, place: '成都 · 春熙路', requestId: 'test-request-1' })
+  assert.equal(created.status, 'published')
+  const saved = await api.request('content.get', { id: created.id })
+  assert.equal(saved.text, '只保存在本机')
+  assert.equal(saved.mine, true)
   config.demoMode = false; config.envId = ''
 })
 test('云数据库字符串 ID 映射到稳定数字标记，过期查询不覆盖新筛选', async () => {

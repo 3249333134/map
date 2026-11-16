@@ -1,10 +1,35 @@
-<view class="page"><view class="heading">消息 <text wx:if="{{unread}}" class="badge">{{unread}}</text></view><view class="muted">好友申请与内容互动都在这里，没有私聊。</view><view wx:if="{{error}}" class="error">{{error}}<button class="secondary" bindtap="load">重试</button></view>
-  <view wx:for="{{items}}" wx:key="_id" class="notice-row" data-id="{{item._id}}" bindtap="open" aria-role="button">
-    <image wx:if="{{item.friendNotice && item.actor}}" class="notice-avatar" src="{{item.actor.avatarUrl || '/static/avatars/' + item.actor.avatarKey + '.png'}}" mode="aspectFill" />
-    <view class="notice-main"><view class="row-title">{{item.read ? '' : '• '}}{{item.actorName ? item.actorName + ' ' : ''}}{{item.label}}</view><view class="muted">{{item.timeText}} · {{item.read ? '已读' : '未读'}}</view>
-      <view wx:if="{{item.type === 'friend_request' && (item.friendStatus === 'pending' || !item.friendStatus) && !item.responseText}}" class="notice-actions"><button data-id="{{item._id}}" data-accept="true" catchtap="respondFriend" loading="{{item.friendBusy}}">同意</button><button class="notice-decline" data-id="{{item._id}}" data-accept="false" catchtap="respondFriend" disabled="{{item.friendBusy}}">忽略</button></view>
-      <view wx:if="{{item.responseText}}" class="notice-response">{{item.responseText}}</view>
+<view class="page">
+  <view class="hero">
+    <view class="hero-row">
+      <view class="hero-copy-wrap">
+        <view class="hero-title">消息</view>
+        <view class="hero-copy">好友申请与内容互动都在这里，没有私聊。</view>
+      </view>
+      <view wx:if="{{unread}}" class="unread-pill">{{unread}} 条未读</view>
     </view>
   </view>
-  <view wx:if="{{!items.length && !loading && !error}}" class="error">还没有通知，去附近地图认识同好吧。</view><view wx:if="{{loading}}" class="muted section">正在加载…</view><button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多消息</button>
-</view><bottom-nav selected="message" />
+
+  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="load">重试</button></view>
+
+  <view wx:for="{{items}}" wx:key="_id" class="notice-card {{item.read ? '' : 'unread'}}" data-id="{{item._id}}" bindtap="open" aria-role="button">
+    <view class="notice-icon {{item.tone}}"><t-icon name="{{item.icon}}" size="18px" color="currentColor" /></view>
+    <view class="notice-body">
+      <view class="notice-title">{{item.actorName ? item.actorName + ' ' : ''}}{{item.label}}</view>
+      <view class="notice-time">{{item.timeText}} · {{item.readText}}</view>
+      <view wx:if="{{item.type === 'friend_request' && (item.friendStatus === 'pending' || !item.friendStatus) && !item.responseText}}" class="notice-actions">
+        <button data-id="{{item._id}}" data-accept="true" catchtap="respondFriend" loading="{{item.friendBusy}}">同意</button>
+        <button class="notice-decline" data-id="{{item._id}}" data-accept="false" catchtap="respondFriend" disabled="{{item.friendBusy}}">忽略</button>
+      </view>
+      <view wx:if="{{item.responseText}}" class="notice-response">{{item.responseText}}</view>
+    </view>
+    <view wx:if="{{!item.read}}" class="dot" />
+  </view>
+
+  <view wx:if="{{!items.length && !loading && !error}}" class="empty-card">
+    <view class="empty-title">还没有通知</view>
+    <view class="empty-copy">去附近地图认识同好，互动会出现在这里。</view>
+  </view>
+  <view wx:if="{{loading}}" class="muted section">正在加载…</view>
+  <button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多消息</button>
+</view>
+<bottom-nav selected="message" />

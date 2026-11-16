@@ -5,3 +5,9 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+.DS_Store
+
+# 形象生成服务的模型权重与虚拟环境（体积大，本地下载）
+server/weights/
+server/.venv/
+server/**/__pycache__/

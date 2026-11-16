@@ -2,20 +2,24 @@ const api = require('../../utils/api')
 const { back } = require('../../utils/navigation')
 const DRAFT = 'map-social-text-draft-v1'
 Page({
-  data: { kind: 'post', title: '', text: '', category: '日常', categories: ['日常', '散步', '户外'], photos: [], location: null, date: '', startTime: '', endDate: '', endTime: '', capacity: '20', busy: false, progress: '', error: '', submitted: null },
+  data: { kind: 'post', title: '', text: '', category: '日常', categories: ['日常', '散步', '户外'], photos: [], location: null, date: '', startTime: '', endDate: '', endTime: '', capacity: '20', busy: false, progress: '', error: '', submitted: null, demoMode: api.config.demoMode },
   onLoad(options = {}) { const draft = wx.getStorageSync(DRAFT); if (draft && !options.kind) this.setData(draft); if (options.kind) this.setData({ kind: options.kind === 'activity' ? 'activity' : 'post' }); this.createRequest = draft && !options.kind && draft.requestId ? draft.requestId : api.requestId(); this.saveDraft() },
   onUnload() { this.disposed = true },
   field(event) { this.setData({ [event.currentTarget.dataset.field]: event.detail.value }); this.saveDraft() },
   kind(event) { this.setData({ kind: event.currentTarget.dataset.kind }); this.saveDraft() },
   category(event) { this.setData({ category: this.data.categories[Number(event.detail.value)] }); this.saveDraft() },
   saveDraft() { const { kind, title, text, category, date, startTime, endDate, endTime, capacity, location } = this.data; wx.setStorageSync(DRAFT, { kind, title, text, category, date, startTime, endDate, endTime, capacity, location, requestId: this.createRequest }) },
-  async choosePlace() { try { const place = await wx.chooseLocation({}); this.setData({ location: { latitude: place.latitude, longitude: place.longitude, place: place.name || place.address } }); this.saveDraft() } catch (_) { wx.showToast({ title: '未选择地点，可手动选点或检查位置权限', icon: 'none' }) } },
+  async choosePlace() {
+    if (api.config.demoMode) { this.setData({ location: { latitude: 30.6532, longitude: 104.0641, place: '成都 · 春熙路（演示地点）' } }); this.saveDraft(); wx.showToast({ title: '已选择演示地点', icon: 'none' }); return }
+    try { const place = await wx.chooseLocation({}); this.setData({ location: { latitude: place.latitude, longitude: place.longitude, place: place.name || place.address } }); this.saveDraft() } catch (_) { wx.showToast({ title: '未选择地点，可手动选点或检查位置权限', icon: 'none' }) }
+  },
   async choosePhotos() {
     try { const result = await wx.chooseMedia({ count: 9 - this.data.photos.length, mediaType: ['image'], sizeType: ['compressed'] }); this.setData({ photos: this.data.photos.concat(result.tempFiles.map(file => ({ path: file.tempFilePath, mediaId: '' }))) }) } catch (_) {}
   },
   removePhoto(event) { if (!this.data.busy) this.setData({ photos: this.data.photos.filter((_, index) => index !== Number(event.currentTarget.dataset.index)) }) },
   async upload(photo, index) {
     if (photo.mediaId) return photo.mediaId
+    if (api.config.demoMode) { photo.mediaId = photo.path; return photo.path }
     let compressed = photo.path
     try { compressed = (await wx.compressImage({ src: photo.path, quality: 75 })).tempFilePath } catch (_) {}
     const info = await wx.getFileInfo({ filePath: compressed })

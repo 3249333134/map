@@ -1,23 +1,8 @@
 const config = require('../config/cloud')
-const samples = require('../data/demo')
-const demoCosplayers = require('../data/demo-cosplayers')
+const demo = require('./demo-store')
 function error(code, message) { return Object.assign(new Error(message), { code }) }
 async function request(action, input = {}) {
-  if (config.demoMode) {
-    if (action === 'presence.nearby') return { items: demoCosplayers }
-    if (action === 'user.me') return { id: 'demo-user', nickname: '地图朋友', avatarKey: 'mika', avatarUrl: '/static/avatars/mika.png', tags: [], isAdmin: false, blocked: false }
-    if (action === 'friends.list') return { items: [], cursor: null }
-    if (action === 'mine') return { items: [], cursor: null }
-    if (action === 'presence.me') return null
-    if (action === 'notifications.list') return { items: [], cursor: null }
-    if (action === 'notifications.unread') return { count: 0 }
-    if (action === 'feed') {
-      const items = input.kind === 'activity' ? [] : samples.filter(item => (!input.category || input.category === '全部' || item.category === input.category) && `${item.title}${item.text}${item.place}`.includes(input.query || ''))
-      return { items, cursor: null }
-    }
-    if (action === 'content.get') { const item = samples.find(row => String(row.id) === String(input.id)); if (item) return { ...item, images: [], demo: true }; throw error('NOT_FOUND', '示例不存在') }
-    throw error('DEMO_READONLY', '当前是只读演示模式，请配置云环境后使用此功能')
-  }
+  if (config.demoMode) return demo.request(action, input)
   if (!config.envId) throw error('CLOUD_NOT_CONFIGURED', '尚未配置云环境，请先完成部署后重试')
   if (!wx.cloud) throw error('CLOUD_UNAVAILABLE', '当前微信版本不支持云开发，请升级后重试')
   let response

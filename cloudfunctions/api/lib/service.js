@@ -50,8 +50,11 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
   async function publicUser(user) {
     if (!user) return null
     const media = user.avatarMediaId ? await repo.get('media', user.avatarMediaId) : null
-    const urls = media?.status === 'approved' && media.fileId ? await files.urls([media.fileId]) : {}
-    return { id: user._id, nickname: user.nickname, avatarKey: user.avatarKey || 'mika', avatarVersion: media?.status === 'approved' ? media._id : user.avatarKey || 'mika', avatarUrl: media?.status === 'approved' ? urls[media.fileId] || '' : '', tags: user.tags || [] }
+    const frameMedia = media?.status === 'approved' ? await Promise.all((user.avatarFrameMediaIds || []).map(id => repo.get('media', id))) : []
+    const fileIds = [media?.status === 'approved' ? media.fileId : '', ...frameMedia.map(row => row && (row.status === 'ready' || (row._id === user.avatarMediaId && row.status === 'approved')) ? row.fileId : '')].filter(Boolean)
+    const urls = fileIds.length ? await files.urls(fileIds) : {}
+    const avatarFrameUrls = frameMedia.map(row => row && (row.status === 'ready' || (row._id === user.avatarMediaId && row.status === 'approved')) ? urls[row.fileId] || '' : '').filter(Boolean)
+    return { id: user._id, nickname: user.nickname, avatarKey: user.avatarKey || 'mika', avatarVersion: media?.status === 'approved' ? `${media._id}:${(user.avatarFrameMediaIds || []).join(',')}` : user.avatarKey || 'mika', avatarUrl: avatarFrameUrls[0] || (media?.status === 'approved' ? urls[media.fileId] || '' : ''), avatarFrameUrls, tags: user.tags || [] }
   }
   async function nearby(input, uid) {
     const center = input.center || { latitude: 30.651, longitude: 104.065 }
@@ -62,7 +65,7 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
       const user = await repo.get('users', row.ownerId)
       if (!user || user.blocked) continue
       const edge = uid ? await repo.get('friendships', idFor('friend', uid, row.ownerId)) : null
-      items.push({ id: row.ownerId, isMine: row.ownerId === uid, latitude: row.latitude, longitude: row.longitude, place: row.place, mode: row.mode, shout: row.shout, expiresAt: row.expiresAt, updatedAt: row.updatedAt, avatar: await publicUser(user), friendStatus: edge?.status || '' })
+      items.push({ id: row.ownerId, isMine: row.ownerId === uid, latitude: row.latitude, longitude: row.longitude, place: row.place, mode: row.mode, movementMode: row.movementMode || 'stationary', shout: row.shout, expiresAt: row.expiresAt, updatedAt: row.updatedAt, avatar: await publicUser(user), friendStatus: edge?.status || '' })
     }
     return { items }
   }
@@ -232,7 +235,7 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
     if (action === 'presence.nearby') return nearby(input, openid ? idFor('user', openid) : '')
     const actor = uidOf(openid)
     if (action === 'user.identity') return { id: actor }
-    if (action === 'presence.me') { const row = await repo.get('presences', actor); return row ? { active: !!row.active, latitude: row.latitude, longitude: row.longitude, place: row.place, mode: row.mode, shout: row.shout || '', expiresAt: row.expiresAt } : null }
+    if (action === 'presence.me') { const row = await repo.get('presences', actor); return row ? { active: !!row.active, latitude: row.latitude, longitude: row.longitude, place: row.place, mode: row.mode, movementMode: row.movementMode || 'stationary', shout: row.shout || '', expiresAt: row.expiresAt } : null }
     if (action === 'presence.set') return updatePresence(input, actor, openid)
     if (action === 'presence.off') { await member(actor); await repo.set('presences', actor, { ...(await repo.get('presences', actor)), ownerId: actor, active: false, updatedAt: now() }); return { active: false } }
     if (action === 'friend.request') return friendRequest(input.userId, actor)
@@ -258,6 +261,7 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
       let avatarMediaId = previous?.avatarMediaId || ''
       let avatarReviewStatus = previous?.avatarReviewStatus || ''
       let avatarPendingMediaId = previous?.avatarPendingMediaId || ''
+      let avatarFrameMediaIds = previous?.avatarFrameMediaIds || []
       let earlyAvatarVerdict = null
       let pendingAvatarMediaId = ''
       if (input.avatarMediaId !== undefined) {
@@ -265,10 +269,16 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
         if (input.avatarMediaId) {
           const media = await repo.get('media', input.avatarMediaId)
           requireThat(media?.ownerId === actor && media.status === 'ready', 'MEDIA', '头像上传尚未完成，请重试')
+          if (input.avatarFrameMediaIds !== undefined) {
+            requireThat(Array.isArray(input.avatarFrameMediaIds) && input.avatarFrameMediaIds.length === 4, 'INVALID', '动作帧数量无效')
+            const frameRows = await Promise.all(input.avatarFrameMediaIds.map(id => repo.get('media', id)))
+            requireThat(frameRows.every(row => row?.ownerId === actor && row.status === 'ready'), 'MEDIA', '动作帧上传尚未完成，请重试')
+            avatarFrameMediaIds = input.avatarFrameMediaIds
+          }
           const traceId = await moderation.image(media.fileId, openid)
           const early = await repo.transaction(async tx => {
             const callback = await tx.get('moderationTasks', traceId)
-            await tx.set('users', actor, { ...previous, nickname, avatarKey, tags: safeTags, avatarMediaId, avatarPendingMediaId: input.avatarMediaId, avatarReviewStatus: 'pending', createdAt: previous?.createdAt || now() })
+            await tx.set('users', actor, { ...previous, nickname, avatarKey, tags: safeTags, avatarMediaId, avatarFrameMediaIds, avatarPendingMediaId: input.avatarMediaId, avatarReviewStatus: 'pending', createdAt: previous?.createdAt || now() })
             await tx.set('moderationTasks', traceId, { type: 'profile_avatar', mediaId: input.avatarMediaId, userId: actor, status: 'waiting', createdAt: now() })
             await tx.set('media', input.avatarMediaId, { ...media, status: 'checking', traceId, checkingAt: now() })
             return callback?.status === 'early' ? callback.suggest : null
@@ -277,9 +287,9 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
           pendingAvatarMediaId = input.avatarMediaId
           avatarPendingMediaId = input.avatarMediaId
           avatarReviewStatus = 'pending'
-        } else { avatarMediaId = ''; avatarPendingMediaId = ''; avatarReviewStatus = '' }
+        } else { avatarMediaId = ''; avatarFrameMediaIds = []; avatarPendingMediaId = ''; avatarReviewStatus = '' }
       }
-      const user = { ...previous, nickname, avatarKey, tags: safeTags, avatarMediaId, avatarPendingMediaId, avatarReviewStatus, createdAt: previous?.createdAt || now() }
+      const user = { ...previous, nickname, avatarKey, tags: safeTags, avatarMediaId, avatarFrameMediaIds, avatarPendingMediaId, avatarReviewStatus, createdAt: previous?.createdAt || now() }
       if (!pendingAvatarMediaId) await repo.set('users', actor, user)
       if (earlyAvatarVerdict && pendingAvatarMediaId) await require('./moderation').settleMedia(repo, (await repo.get('media', pendingAvatarMediaId)).traceId, earlyAvatarVerdict, now)
       const savedUser = await repo.get('users', actor)
@@ -360,7 +370,8 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
     if (action === 'media.reserve') {
       await member(actor)
       const id = idFor('media', actor, random())
-      const cloudPath = `private/${id}.jpg`
+      const extension = input.extension === 'png' ? 'png' : 'jpg'
+      const cloudPath = `private/${id}.${extension}`
       const day = idFor('media-limit', actor, Math.floor(now() / 86400000))
       await repo.transaction(async tx => {
         const limit = await tx.get('limits', day)
@@ -372,7 +383,8 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
     }
     if (action === 'media.complete') {
       const token = idFor(random())
-      const cloudPath = `sealed/${input.id}-${token}.jpg`
+      const extension = typeof input.fileId === 'string' && input.fileId.endsWith('.png') ? 'png' : 'jpg'
+      const cloudPath = `sealed/${input.id}-${token}.${extension}`
       const acquired = await repo.transaction(async tx => {
         const image = await tx.get('media', input.id)
         requireThat(image?.ownerId === actor && typeof input.fileId === 'string' && input.fileId.startsWith('cloud://') && input.fileId.slice(input.fileId.indexOf('/', 8) + 1) === image.cloudPath, 'MEDIA', '图片与上传记录不匹配')

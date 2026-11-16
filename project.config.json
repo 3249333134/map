@@ -10,6 +10,7 @@
     "enhance": true,
     "postcss": true,
     "minified": true,
+    "urlCheck": false,
     "compileWorklet": false,
     "uglifyFileName": false,
     "uploadWithSourceMap": true,

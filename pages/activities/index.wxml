@@ -1,1 +1,35 @@
-<view class="page"><view class="heading">一起去附近</view><view class="muted">当前地图中心 10 公里内的活动</view><view class="field"><input value="{{query}}" bindinput="input" bindconfirm="search" confirm-type="search" placeholder="搜索活动" /><button class="secondary" bindtap="search">搜索</button></view><button class="primary" bindtap="publish">发起活动</button><view wx:if="{{error}}" class="error">{{error}}<button class="secondary" bindtap="load">重试</button></view><view wx:for="{{items}}" wx:key="id" class="row" data-id="{{item.id}}" bindtap="open" aria-role="button"><view class="row-title">{{item.title}}</view><view class="muted">{{item.place}} · {{item.cancelled ? '已取消' : item.activityClosed ? '暂不可报名' : '可报名'}}</view><view class="row-body">{{item.timeText}}</view><view class="muted">{{item.joinedCount}} / {{item.capacity}} 人报名</view></view><view wx:if="{{!items.length && !loading && !error}}" class="error">附近还没有活动，发起第一个吧。</view><view wx:if="{{loading}}" class="muted section">正在加载…</view><button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多活动</button></view><bottom-nav selected="service" />
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">附近活动</view>
+    <view class="hero-copy">10 公里内，一起出门拍照、逛展、散步。</view>
+    <view class="search-bar">
+      <t-icon name="search" size="18px" color="#8a8a82" />
+      <input value="{{query}}" bindinput="input" bindconfirm="search" confirm-type="search" placeholder="搜索活动名称或地点" placeholder-class="placeholder" />
+      <button class="search-action" bindtap="search">搜索</button>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="load">重试</button></view>
+
+  <view wx:for="{{items}}" wx:key="id" class="activity-card" data-id="{{item.id}}" bindtap="open" aria-role="button" aria-label="查看活动{{item.title}}">
+    <view class="date-block"><text class="date-day">{{item.dayText}}</text><text class="date-month">{{item.monthText}}</text></view>
+    <view class="activity-main">
+      <view class="activity-head"><text class="activity-title">{{item.title}}</text><text class="state {{item.cancelled || item.activityClosed ? 'off' : ''}}">{{item.stateText}}</text></view>
+      <view class="activity-meta">{{item.place}}</view>
+      <view class="activity-time">{{item.timeText}}</view>
+      <view class="progress"><view class="progress-fill" style="width: {{item.fillPercent}}%"></view></view>
+      <view class="activity-foot"><text>{{item.joinedCount}} / {{item.capacity}} 人报名</text><text class="category-tag">{{item.category}}</text></view>
+    </view>
+  </view>
+
+  <view wx:if="{{!items.length && !loading && !error}}" class="empty-card">
+    <view class="empty-title">附近还没有活动</view>
+    <view class="empty-copy">发起第一个活动，让同好找到你。</view>
+    <button class="secondary" bindtap="publish">发起活动</button>
+  </view>
+  <view wx:if="{{loading}}" class="muted section">正在加载…</view>
+  <button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多活动</button>
+
+  <button class="fab" bindtap="publish" aria-label="发起活动"><t-icon name="add" size="24px" color="#fff" /><text>发起活动</text></button>
+</view>
+<bottom-nav selected="service" />

@@ -1,0 +1,7 @@
+torch==2.2.2
+numpy<2
+pillow
+click
+requests
+torchdiffeq
+onnxruntime==1.19.2

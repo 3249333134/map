@@ -1,1 +1,6 @@
-<view class="page"><button class="secondary" bindtap="back">返回浏览</button><view wx:if="{{loading}}" class="muted section">正在加载…</view><view wx:if="{{error}}" class="error">{{error}}<button class="secondary" bindtap="load">重试</button></view><content-detail wx:if="{{item}}" item="{{item}}" bindchanged="changed" bindremoved="removed" /></view>
+<view class="detail-page">
+  <view class="detail-bar"><button class="detail-back" bindtap="back"><t-icon name="chevron-left" size="18px" /><text>返回</text></button></view>
+  <view wx:if="{{loading}}" class="muted section">正在加载…</view>
+  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="load">重试</button></view>
+  <content-detail wx:if="{{item}}" item="{{item}}" bindchanged="changed" bindremoved="removed" />
+</view>

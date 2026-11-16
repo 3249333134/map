@@ -1,1 +1,39 @@
 @import '../../styles/pages.wxss';
+
+.hero { padding: 18px; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(24, 24, 20, .04); }
+.hero-title { color: #1c1c1a; font-size: 24px; font-weight: 700; line-height: 32px; letter-spacing: -0.4px; }
+.hero-copy { margin-top: 5px; color: #85857d; font-size: 12px; line-height: 20px; }
+.segmented { display: flex; gap: 6px; margin-top: 14px; padding: 4px; border-radius: 15px; background: #f4f4f2; }
+.segmented button { flex: 1; height: 38px; margin: 0; border-radius: 12px; color: #6a6a63; font-size: 13px; line-height: 38px; }
+.segmented button.active { background: #1c1c1a; color: #fff; font-weight: 600; }
+
+.card-title { color: #1c1c1a; font-size: 16px; font-weight: 700; line-height: 23px; }
+.count { margin-left: 6px; color: #9a9a92; font-size: 11px; font-weight: 400; }
+
+.picker-row { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 14px; border: 1px solid #ececea; border-radius: 13px; background: #fafaf8; color: #1c1c1a; font-size: 15px; }
+.picker-value { display: flex; align-items: center; gap: 4px; color: #6a6a63; }
+
+.place-row { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 12px; border: 1px dashed #dededa; border-radius: 14px; background: #fafaf8; text-align: left; }
+.card .place-row { width: 100%; }
+.place-row.picked { border-style: solid; border-color: #dfe5d5; background: #f8faf4; }
+.place-icon { flex: 0 0 38px; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: #fff; }
+.place-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.place-name { color: #1c1c1a; font-size: 14px; line-height: 20px; }
+.place-hint { color: #9a9a92; font-size: 11px; line-height: 17px; }
+
+.photo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.photo-tile { position: relative; width: 92px; height: 92px; }
+.photo-tile image { width: 92px; height: 92px; border-radius: 11px; background: #f4f4f2; }
+.photo-tile .remove { position: absolute; top: -6px; right: -6px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: 0; padding: 0; border-radius: 50%; background: #1c1c1a; color: #fff; font-size: 15px; line-height: 24px; }
+.photo-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 92px; height: 92px; margin: 0; border: 1px dashed #dcdcd7; border-radius: 11px; background: #fafaf8; color: #8a8a82; font-size: 11px; line-height: 16px; }
+.photo-grid .photo-add { width: 92px; }
+.photo-hint { margin-top: 10px; }
+
+.error { margin-top: 14px; }
+.progress-note { margin-top: 14px; padding: 11px 14px; border-radius: 13px; background: #f7f1df; color: #6b5523; font-size: 12px; line-height: 18px; }
+.submit { margin-top: 18px; }
+.submit-hint { margin-top: 10px; text-align: center; }
+
+.success-card { margin-top: 24px; padding: 32px 22px; border-radius: 20px; background: #fff; text-align: center; box-shadow: 0 1px 2px rgba(24, 24, 20, .04); }
+.success-mark { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; background: #1c1c1a; }
+.success-title { margin-bottom: 6px; color: #1c1c1a; font-size: 21px; font-weight: 700; line-height: 29px; }
