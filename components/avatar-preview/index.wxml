@@ -1,0 +1,16 @@
+<view wx:if="{{open}}" class="preview-overlay">
+  <canvas type="2d" id="scenery" class="scenery" />
+  <image wx:if="{{backgroundPath}}" class="scene-background" src="{{backgroundPath}}" mode="scaleToFill" />
+  <view class="preview-toolbar" style="top: {{top}}px;">
+    <button bindtap="close" aria-label="关闭预览">×</button>
+    <text>{{current + 1}} / {{frames.length}}</text>
+    <button bindtap="randomize">换背景</button>
+  </view>
+  <swiper class="sprite-swiper" current="{{current}}" autoplay="{{frames.length > 1}}" interval="450" duration="0" circular bindchange="change">
+    <swiper-item wx:for="{{frames}}" wx:key="*this">
+      <view class="sprite-stage"><image src="{{item}}" mode="aspectFit" binderror="imageFailed" /></view>
+    </swiper-item>
+  </swiper>
+  <text class="scene-name">{{sceneName}}</text>
+  <view wx:if="{{imageError}}" class="preview-error">角色图片加载失败，请关闭预览后重新打开</view>
+</view>

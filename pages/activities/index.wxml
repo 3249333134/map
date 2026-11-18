@@ -32,4 +32,3 @@
 
   <button class="fab" bindtap="publish" aria-label="发起活动"><t-icon name="add" size="24px" color="#fff" /><text>发起活动</text></button>
 </view>
-<bottom-nav selected="service" />

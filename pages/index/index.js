@@ -1,38 +1,72 @@
 const { stops, clamp, snap, isCollapsed, LAYOUT } = require('../../utils/panel')
-const { markersFor, cosplayerMarkersFor } = require('../../utils/markers')
+const { markersFor, cosplayerMarkersFor, AVATAR_POSE } = require('../../utils/markers')
 const avatarCache = require('../../utils/avatar-cache')
 const { blurLocation } = require('../../utils/location-blur')
+const { travelDuration } = require('../../utils/movement-speed')
 
 const api = require('../../utils/api')
-const { navigate } = require('../../utils/navigation')
+const { navigate, syncTabBar, openProfileSettings } = require('../../utils/navigation')
 const EXAMPLES = api.config.demoMode ? require('../../data/demo') : []
+const ENCOUNTER_DURATION = 1500
+
+function encounterAvatar(person) {
+  const key = person.avatar?.avatarKey || 'mika'
+  const avatarUrl = person.avatar?.avatarUrl
+  const portrait = person.avatarFramePaths?.[AVATAR_POSE.standing] || person.avatarPath || avatarUrl
+  return {
+    id: person.id,
+    name: person.isMine ? '你' : person.avatar?.nickname || '附近同好',
+    portrait: !portrait || portrait === `/static/avatars/${key}.png` ? `/static/chibi/${key}-0.png` : portrait,
+    action: person.avatarFramePaths?.[AVATAR_POSE.wave] || ''
+  }
+}
 
 Page({
   data: {
     latitude: 30.6510, longitude: 104.0650, scale: 13,
     panelHeight: 400, dragging: false, collapsed: false, safeBottom: 0, bottomBarHeight: LAYOUT.footer, panelBottom: LAYOUT.footer, topInset: 100,
     layout: LAYOUT, keyboardHeight: 0, searchFocused: false, viewMode: 'browse',
-    navigation: [
-      { id: 'home', label: '首页', icon: 'home' },
-      { id: 'service', label: '服务', icon: 'shop' },
-      { id: 'publish', label: '发布' },
-      { id: 'message', label: '消息', icon: 'chat' },
-      { id: 'profile', label: '我的', icon: 'user' }
-    ],
     query: '', activeCategory: '全部', categories: ['全部', '日常', '散步', '户外'], feedMode: 'people',
-    items: EXAMPLES, cosplayers: [], markers: markersFor(EXAMPLES, 0), selectedId: 0, selectedItem: null, selectedPerson: null, scrollTop: 0, scrollIntoView: '',
-    locating: false, locationGranted: false, mapError: false, shoutOpen: false, shoutText: '', shoutBusy: false, friendBusy: false, presenceBusy: false, presenceExpiryText: '', ownPresence: null
-    ,loading: false, dataError: '', cursor: null, unread: 0, unreadBadge: { count: 0 }, emptyBadge: {}, mapVisible: true, areaDirty: false, demoMode: api.config.demoMode
+    items: EXAMPLES, cosplayers: [], ownProfile: null, markers: markersFor(EXAMPLES, 0), selectedId: 0, selectedItem: null, selectedPerson: null, scrollTop: 0, scrollIntoView: '',
+    locating: false, locationGranted: false, mapError: false, shoutOpen: false, shoutText: '', shoutBusy: false, friendBusy: false, presenceBusy: false, presenceExpiryText: '', ownPresence: null, encounter: null
+    ,loading: false, dataError: '', cursor: null, mapVisible: true, areaDirty: false, demoMode: api.config.demoMode
   },
-  onLoad(options = {}) { this.measure(); if (options.post) { this.openShared(options.post); return } if (api.config.demoMode) { this.loadPeople(); this.fetchFeed(); this.loadOwnPresence() } else if (api.config.envId) { this.loadPeople(); this.loadOwnPresence() } },
+  onLoad(options = {}) {
+    const savedCenter = typeof getApp === 'function' && getApp().globalData.center
+    if (savedCenter && Number.isFinite(savedCenter.latitude) && Number.isFinite(savedCenter.longitude)) {
+      this.queryCenter = { latitude: savedCenter.latitude, longitude: savedCenter.longitude }
+      this.setData({ latitude: savedCenter.latitude, longitude: savedCenter.longitude, scale: 15 })
+    }
+    this.measure()
+    this.initialPost = options.post
+  },
   onShow() {
+    syncTabBar(this, 'home', { inset: this.data.safeBottom, visible: !this.data.keyboardHeight })
+    if (!this.ready) return
     if (!api.config.demoMode && !api.config.envId) return
-    api.request('notifications.unread').then(result => { if (!this.disposed) this.setData({ unread: result.count, unreadBadge: { count: result.count } }) }).catch(() => {})
+    this.refreshPeopleMarkers()
+    this.scheduleIdleAction()
     if (getApp().globalData.feedDirty) { getApp().globalData.feedDirty = false; this.fetchFeed() }
-    if (getApp().globalData.presenceDirty) { getApp().globalData.presenceDirty = false; this.loadPeople(); this.loadOwnPresence() }
+    if (getApp().globalData.presenceDirty) {
+      getApp().globalData.presenceDirty = false
+      const center = getApp().globalData.center
+      if (center && Number.isFinite(center.latitude) && Number.isFinite(center.longitude)) {
+        this.queryCenter = { latitude: center.latitude, longitude: center.longitude }
+        this.setData({ latitude: center.latitude, longitude: center.longitude, scale: 15, feedMode: 'people', viewMode: 'browse', selectedPerson: null, selectedItem: null, selectedId: 0 })
+      }
+      this.loadOwnPresence()
+    }
     else if (this.data.ownPresence?.movementMode === 'fuzzy') this.startFuzzyFollow()
   },
-  onReady() { this.map = wx.createMapContext('main-map', this); if (this.data.ownPresence?.active) this.map.moveToLocation({ latitude: this.data.ownPresence.latitude, longitude: this.data.ownPresence.longitude }); this.scheduleMapFit() },
+  onReady() {
+    this.ready = true
+    this.map = wx.createMapContext('main-map', this)
+    if (this.initialPost) { this.openShared(this.initialPost); return }
+    if (api.config.demoMode || api.config.envId) {
+      getApp().globalData.presenceDirty = false
+      this.loadOwnPresence()
+    } else this.setData({ dataError: '云环境尚未配置，当前无法显示真实 Cos 同好或同步地图位置。' })
+  },
   onResize() {
     const info = wx.getWindowInfo()
     // 键盘不改变基础窗口尺寸；横竖屏变化仍需重新布局。
@@ -40,12 +74,49 @@ Page({
     this.measure()
   },
   onHide() {
+    this.cancelEncounter()
+    this.stopIdleAction()
     this.stopFuzzyFollow()
     if (this.drag) this.settleDrag(true)
     if (this.data.searchFocused) this.finishSearch({ adjustMap: false })
     clearTimeout(this.mapFitTimer)
   },
-  onUnload() { this.disposed = true; this.stopFuzzyFollow(); clearTimeout(this.mapFitTimer); clearTimeout(this.searchTimer); clearTimeout(this.handshakeTimer); this.feedVersion = (this.feedVersion || 0) + 1 },
+  onUnload() { this.disposed = true; this.cancelEncounter(); this.stopIdleAction(); this.stopFuzzyFollow(); clearTimeout(this.mapFitTimer); clearTimeout(this.searchTimer); this.feedVersion = (this.feedVersion || 0) + 1 },
+  peopleMarkers(people, selectedId) {
+    return cosplayerMarkersFor(people, selectedId, person => {
+      if (person.isMine && this.walkPose) return this.walkPose
+      return person.id === this.wavingPersonId ? AVATAR_POSE.wave : AVATAR_POSE.standing
+    })
+  },
+  refreshPeopleMarkers() {
+    if (this.data.feedMode === 'people' && this.data.mapVisible && this.data.cosplayers.length) {
+      this.setData({ markers: this.peopleMarkers(this.data.cosplayers, this.data.selectedId) })
+    }
+  },
+  scheduleIdleAction() {
+    clearTimeout(this.idleActionTimer)
+    this.idleActionTimer = setTimeout(() => {
+      if (this.disposed) return
+      if (this.data.feedMode === 'people' && this.data.mapVisible && !this.data.mapError && !this.isWalking) {
+        const candidates = this.data.cosplayers.filter(person => person.avatarFramePaths?.[AVATAR_POSE.wave])
+        if (candidates.length) {
+          this.wavingPersonId = candidates[Math.floor(Math.random() * candidates.length)].id
+          this.refreshPeopleMarkers()
+          this.idleActionTimer = setTimeout(() => {
+            this.wavingPersonId = null
+            this.refreshPeopleMarkers()
+            this.scheduleIdleAction()
+          }, 650)
+          return
+        }
+      }
+      this.scheduleIdleAction()
+    }, 2200 + Math.floor(Math.random() * 2300))
+  },
+  stopIdleAction() {
+    clearTimeout(this.idleActionTimer)
+    this.wavingPersonId = null
+  },
   measure() {
     const info = wx.getWindowInfo()
     this.windowHeight = info.windowHeight
@@ -67,6 +138,9 @@ Page({
     const collapsed = isCollapsed(height, this.targets[0], this.data.collapsed, dragging)
     if (!dragging) this.panelStop = this.targets.indexOf(snap(height, 0, this.targets))
     this.setData({ ...patch, panelHeight: height, collapsed, dragging })
+    if (patch.safeBottom !== undefined || patch.keyboardHeight !== undefined) {
+      syncTabBar(this, 'home', { inset: this.data.safeBottom, visible: !this.data.keyboardHeight })
+    }
   },
   navigationTap(event) {
     if (typeof getApp === 'function') getApp().globalData.center = this.queryCenter || { latitude: this.data.latitude, longitude: this.data.longitude }
@@ -146,7 +220,7 @@ Page({
       const query = this.data.query.trim().toLowerCase()
       const cosplayers = (this.allCosplayers || []).filter(person => person.isMine || `${person.avatar?.nickname || ''} ${(person.avatar?.tags || []).join(' ')} ${person.shout || ''} ${person.place || ''}`.toLowerCase().includes(query))
       const selectedPerson = cosplayers.find(person => person.id === this.data.selectedId) || null
-      this.setData({ cosplayers, selectedPerson, selectedId: selectedPerson ? selectedPerson.id : 0, markers: cosplayerMarkersFor(cosplayers, selectedPerson?.id || 0) })
+      this.setData({ cosplayers, selectedPerson, selectedId: selectedPerson ? selectedPerson.id : 0, markers: this.peopleMarkers(cosplayers, selectedPerson?.id || 0) })
       this.resetScroll()
       return
     }
@@ -177,7 +251,7 @@ Page({
     this.selectPoint(api.config.demoMode ? Number(event.currentTarget.dataset.id) : event.currentTarget.dataset.id)
   },
   async mapTap(event) {
-    if (this.data.feedMode !== 'people' || this.data.viewMode !== 'browse') return
+    if (this.data.encounter || this.data.feedMode !== 'people' || this.data.viewMode !== 'browse') return
     const { latitude, longitude } = event.detail || {}
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return
     wx.showToast({ title: '形象正在走过去', icon: 'none', duration: 900 })
@@ -205,15 +279,16 @@ Page({
     try {
       const result = await api.request('presence.nearby', { center: this.queryCenter || { latitude: this.data.latitude, longitude: this.data.longitude } })
       if (this.disposed || version !== this.peopleVersion || this.isWalking) return
-      this.allCosplayers = this.assignPeople(result.items || [])
+      this.allCosplayers = this.assignPeople(result.items || []).sort((a, b) => Number(b.isMine) - Number(a.isMine))
       const query = this.data.query.trim().toLowerCase()
       const cosplayers = this.allCosplayers.filter(person => person.isMine || `${person.avatar?.nickname || ''} ${(person.avatar?.tags || []).join(' ')} ${person.shout || ''} ${person.place || ''}`.toLowerCase().includes(query))
-      this.setData({ cosplayers, markers: cosplayerMarkersFor(cosplayers, 0), selectedPerson: null, selectedId: 0, viewMode: 'browse', dataError: '', areaDirty: false }, () => avatarCache.loadAll(cosplayers, (id, paths) => {
-        if (this.disposed || this.data.feedMode !== 'people') return
+      if (this.data.feedMode !== 'people') return
+      this.setData({ cosplayers, markers: this.peopleMarkers(cosplayers, 0), selectedPerson: null, selectedId: 0, viewMode: 'browse', dataError: '', areaDirty: false }, () => avatarCache.loadAll(cosplayers, (id, paths) => {
+        if (this.disposed || version !== this.peopleVersion || this.data.feedMode !== 'people') return
         const avatarFramePaths = Array.isArray(paths) ? paths : [paths]
         this.allCosplayers = (this.allCosplayers || []).map(person => person.id === id ? { ...person, avatarFramePaths, avatarPath: avatarFramePaths[0] } : person)
         const visible = this.data.cosplayers.map(person => person.id === id ? { ...person, avatarFramePaths, avatarPath: avatarFramePaths[0] } : person)
-        this.setData({ cosplayers: visible, markers: cosplayerMarkersFor(visible, this.data.selectedId, 0), selectedPerson: this.data.selectedPerson?.id === id ? { ...this.data.selectedPerson, avatarFramePaths, avatarPath: avatarFramePaths[0] } : this.data.selectedPerson })
+        this.setData({ cosplayers: visible, markers: this.peopleMarkers(visible, this.data.selectedId), selectedPerson: this.data.selectedPerson?.id === id ? { ...this.data.selectedPerson, avatarFramePaths, avatarPath: avatarFramePaths[0] } : this.data.selectedPerson })
       }))
       this.resetScroll()
       this.scheduleMapFit()
@@ -223,25 +298,26 @@ Page({
   async loadOwnPresence() {
     const version = this.ownPresenceVersion = (this.ownPresenceVersion || 0) + 1
     try {
-      const result = await api.request('presence.me')
+      const [result, profile] = await Promise.all([api.request('presence.me'), api.request('user.me')])
       if (this.disposed || version !== this.ownPresenceVersion || this.isWalking) return
       const active = result?.active && result.expiresAt > Date.now() ? result : null
-      this.setData({ ownPresence: active })
+      this.setData({ ownPresence: active, ownProfile: profile })
       this.walkPosition = active ? { latitude: active.latitude, longitude: active.longitude } : null
       if (active) {
         this.queryCenter = { latitude: active.latitude, longitude: active.longitude }
         this.setData({ latitude: active.latitude, longitude: active.longitude, scale: 15 })
-        if (this.map) this.map.moveToLocation({ latitude: active.latitude, longitude: active.longitude })
-        this.loadPeople()
         if (active.movementMode === 'fuzzy') {
           this.lastBlurCell = blurLocation(active.latitude, active.longitude).cellKey
           this.startFuzzyFollow()
         } else this.stopFuzzyFollow()
       } else this.stopFuzzyFollow()
-    } catch (_) {}
+    } catch (_) {
+      // Nearby public browsing remains available if the user's own presence request fails.
+    }
+    if (!this.disposed && version === this.ownPresenceVersion && !this.isWalking) await this.loadPeople()
   },
   async prepareAndWalk(destination, handshakePerson = null) {
-    if (this.data.presenceBusy) return
+    if (this.data.presenceBusy || this.data.encounter) return
     if (this.data.ownPresence?.active) {
       await this.walkOwnAvatarTo(destination, handshakePerson)
       return
@@ -251,7 +327,7 @@ Page({
       const profile = await api.request('user.me')
       if (!profile?.nickname) {
         wx.showToast({ title: '先到“我的”保存昵称和形象', icon: 'none' })
-        wx.navigateTo({ url: '/pages/me/index?setup=1' })
+        navigate('profile', { setup: true })
         return
       }
       const center = await new Promise((resolve, reject) => {
@@ -265,15 +341,15 @@ Page({
       this.queryCenter = { latitude: point.latitude, longitude: point.longitude }
       const self = {
         id: profile.id || 'self', isMine: true, ...point, active: true, expiresAt: result.expiresAt,
-        avatar: { id: profile.id || 'self', nickname: profile.nickname, avatarKey: profile.avatarKey || 'mika', avatarUrl: profile.avatarUrl || '', tags: profile.tags || [] },
+        avatar: { id: profile.id || 'self', nickname: profile.nickname, avatarKey: profile.avatarKey || 'mika', avatarUrl: profile.avatarUrl || '', avatarFrameUrls: profile.avatarFrameUrls || [], tags: profile.tags || [] },
         avatarFramePaths: profile.avatarFrameUrls || [],
         friendStatus: ''
       }
-      const people = this.assignPeople([...(this.allCosplayers || this.data.cosplayers).filter(person => !person.isMine), self])
+      const people = this.assignPeople([self, ...(this.allCosplayers || this.data.cosplayers).filter(person => !person.isMine)])
       this.allCosplayers = people
       const query = this.data.query.trim().toLowerCase()
       const cosplayers = people.filter(person => person.isMine || `${person.avatar?.nickname || ''} ${(person.avatar?.tags || []).join(' ')} ${person.shout || ''} ${person.place || ''}`.toLowerCase().includes(query))
-      this.setData({ ownPresence: { ...point, active: true, expiresAt: result.expiresAt }, cosplayers, markers: cosplayerMarkersFor(cosplayers, 0) })
+      this.setData({ ownPresence: { ...point, active: true, expiresAt: result.expiresAt }, cosplayers, markers: this.peopleMarkers(cosplayers, 0) })
       getApp().globalData.presenceDirty = true
       this.setData({ presenceBusy: false })
       await this.walkOwnAvatarTo(destination, handshakePerson)
@@ -282,7 +358,7 @@ Page({
   },
   startFuzzyFollow() {
     this.stopFuzzyFollow()
-    if (this.data.ownPresence?.movementMode !== 'fuzzy') return
+    if (api.config.demoMode || this.data.ownPresence?.movementMode !== 'fuzzy') return
     this.runFuzzyLocation()
     this.fuzzyTimer = setInterval(() => this.runFuzzyLocation(), 30000)
   },
@@ -307,14 +383,14 @@ Page({
       this.queryCenter = { latitude: point.latitude, longitude: point.longitude }
       const cosplayers = this.data.cosplayers.map(person => person.isMine ? { ...person, ...point, active: true, expiresAt: result.expiresAt } : person)
       this.allCosplayers = (this.allCosplayers || []).map(person => person.isMine ? { ...person, ...point, active: true, expiresAt: result.expiresAt } : person)
-      this.setData({ ownPresence: { ...this.data.ownPresence, ...point, active: true, expiresAt: result.expiresAt }, cosplayers, markers: cosplayerMarkersFor(cosplayers, this.data.selectedId, 0), latitude: point.latitude, longitude: point.longitude })
-      if (this.map) this.map.moveToLocation({ latitude: point.latitude, longitude: point.longitude })
+      this.setData({ ownPresence: { ...this.data.ownPresence, ...point, active: true, expiresAt: result.expiresAt }, cosplayers, markers: this.peopleMarkers(cosplayers, this.data.selectedId), latitude: point.latitude, longitude: point.longitude })
     } catch (_) {
       // A temporary location failure leaves the last coarse position active.
     } finally { this.fuzzyUpdating = false }
   },
   async walkOwnAvatarTo(destination, handshakePerson = null) {
     if (this.data.presenceBusy) return
+    const encounterVersion = this.encounterVersion
     this.stopFuzzyFollow()
     this.peopleVersion = (this.peopleVersion || 0) + 1
     this.ownPresenceVersion = (this.ownPresenceVersion || 0) + 1
@@ -342,50 +418,71 @@ Page({
     this.walkPosition = start
     this.walkTarget = target
     this.setData({ loading: false })
-    this.setData({ ownPresence: { ...presence, movementMode: 'virtual' }, handshakeText: '' })
+    this.setData({ ownPresence: { ...presence, movementMode: 'virtual' } })
     try {
-      const duration = distance < 3 ? 0 : Math.max(900, Math.min(6500, Math.round(distance / 1.4 * 1000)))
+      const duration = travelDuration(distance)
       if (duration) await this.animateOwnMarker(own, start, target, duration)
+      this.walkPose = null
       if (this.disposed || runId !== this.walkRunId) return
       this.walkPosition = target
       const point = { ...this.data.ownPresence, ...target, mode: 'current', movementMode: 'virtual' }
       this.queryCenter = { latitude: target.latitude, longitude: target.longitude }
       const cosplayers = this.data.cosplayers.map(person => person.isMine ? { ...person, ...target, movementMode: 'virtual', place: point.place } : person)
       this.allCosplayers = (this.allCosplayers || []).map(person => person.isMine ? { ...person, ...target, movementMode: 'virtual', place: point.place } : person)
-      this.setData({ ownPresence: { ...point, active: true }, cosplayers, markers: cosplayerMarkersFor(cosplayers, this.data.selectedId, 0) })
+      this.setData({ ownPresence: { ...point, active: true }, cosplayers })
+      this.refreshPeopleMarkers()
       getApp().globalData.presenceDirty = true
       const result = await api.request('presence.set', point)
       if (this.disposed || runId !== this.walkRunId) return
       this.setData({ ownPresence: { ...this.data.ownPresence, expiresAt: result.expiresAt } })
-      if (handshakePerson && !this.disposed && runId === this.walkRunId) {
-        this.setData({ handshakeText: `和 ${handshakePerson.avatar?.nickname || '附近同好'} 握手成功` })
-        clearTimeout(this.handshakeTimer)
-        this.handshakeTimer = setTimeout(() => { if (!this.disposed) this.setData({ handshakeText: '' }) }, 1800)
-        if (typeof wx.vibrateShort === 'function') wx.vibrateShort({ type: 'light' })
-        await new Promise(resolve => setTimeout(resolve, 850))
-        const person = this.data.cosplayers.find(row => row.id === handshakePerson.id) || handshakePerson
-        this.selectPerson({ currentTarget: { dataset: { id: person.id } } })
+      if (handshakePerson && encounterVersion === this.encounterVersion && this.data.feedMode === 'people' && this.data.viewMode === 'browse') {
+        this.showEncounter(own, handshakePerson)
       }
     } catch (error) { if (!this.disposed) api.toast(error) }
     finally {
-      if (runId === this.walkRunId) { this.isWalking = false; this.walkTarget = null }
+      if (runId === this.walkRunId) {
+        this.isWalking = false
+        this.walkTarget = null
+        if (this.walkPose) { this.walkPose = null; if (!this.disposed) this.refreshPeopleMarkers() }
+      }
       if (!this.disposed && runId === this.walkRunId) this.setData({ presenceBusy: false })
     }
   },
+  showEncounter(own, target) {
+    const person = this.data.cosplayers.find(row => row.id === target.id) || target
+    this.setData({ encounter: { duration: ENCOUNTER_DURATION, avatars: [encounterAvatar(own), encounterAvatar(person)] } })
+    if (typeof wx.vibrateShort === 'function') wx.vibrateShort({ type: 'light' })
+    this.encounterTimer = setTimeout(() => {
+      if (this.disposed || !this.data.encounter) return
+      this.setData({ encounter: null })
+      if (this.data.feedMode === 'people' && this.data.viewMode === 'browse') {
+        this.showPerson(this.data.cosplayers.find(row => row.id === person.id) || person)
+      }
+    }, ENCOUNTER_DURATION)
+  },
+  cancelEncounter() {
+    this.encounterVersion = (this.encounterVersion || 0) + 1
+    clearTimeout(this.encounterTimer)
+    if (this.data.encounter && !this.disposed) this.setData({ encounter: null })
+  },
+  encounterTap() {},
   async animateOwnMarker(own, start, target, duration) {
     return this.animateOwnMarkerFallback(start, target, duration)
   },
   async animateOwnMarkerFallback(start, target, duration) {
-    const steps = Math.max(18, Math.min(100, Math.round(duration / 50)))
-    const delay = Math.max(35, Math.round(duration / steps))
+    const steps = Math.max(2, Math.min(100, Math.ceil(duration / 50)))
+    const delay = Math.max(16, Math.round(duration / steps))
     for (let step = 1; step <= steps; step += 1) {
       if (this.disposed || !this.isWalking) return false
+      this.walkPose = Math.floor((step - 1) * delay / 150) % 2 ? AVATAR_POSE.walkB : AVATAR_POSE.walkA
       const t = step / steps
       const ratio = t * t * (3 - 2 * t)
       const position = { latitude: start.latitude + (target.latitude - start.latitude) * ratio, longitude: start.longitude + (target.longitude - start.longitude) * ratio }
       const cosplayers = this.data.cosplayers.map(person => person.isMine ? { ...person, ...position } : person)
       this.allCosplayers = (this.allCosplayers || []).map(person => person.isMine ? { ...person, ...position } : person)
-      this.setData({ cosplayers, markers: cosplayerMarkersFor(cosplayers, this.data.selectedId, 0) })
+      const patch = { cosplayers }
+      if (this.data.feedMode === 'people' && this.data.mapVisible) patch.markers = this.peopleMarkers(cosplayers, this.data.selectedId)
+      this.setData(patch)
       this.walkPosition = position
       if (step < steps) await new Promise(resolve => setTimeout(resolve, delay))
     }
@@ -394,8 +491,13 @@ Page({
   selectPerson(event) {
     const person = this.data.cosplayers.find(row => row.id === event.currentTarget.dataset.id)
     if (!person) return
+    if (person.isMine) { this.openOwnSettings(); return }
+    this.showPerson(person)
+  },
+  openOwnSettings() { openProfileSettings() },
+  showPerson(person) {
     this.finishSearch({ adjustMap: false }); this.drag = null; wx.hideKeyboard({})
-    this.relayout(1, { viewMode: 'person', selectedId: person.id, selectedPerson: person, selectedItem: null, markers: cosplayerMarkersFor(this.data.cosplayers, person.id), latitude: person.latitude, longitude: person.longitude, scale: 16, presenceExpiryText: this.expiryText(person.expiresAt) })
+    this.relayout(1, { viewMode: 'person', selectedId: person.id, selectedPerson: person, selectedItem: null, markers: this.peopleMarkers(this.data.cosplayers, person.id), latitude: person.latitude, longitude: person.longitude, scale: 16, presenceExpiryText: this.expiryText(person.expiresAt) })
     this.scheduleMapFit(person)
   },
   expiryText(timestamp) { const minutes = Math.max(1, Math.ceil((timestamp - Date.now()) / 60000)); return minutes >= 60 ? `${Math.floor(minutes / 60)} 小时` : `${minutes} 分钟` },
@@ -422,13 +524,13 @@ Page({
     if (this.data.shoutBusy) return
     const text = (typeof value === 'string' ? value : this.data.shoutText).trim()
     if (!text) { wx.showToast({ title: '先写一句想说的话', icon: 'none' }); return }
-    if (!this.data.ownPresence) { wx.navigateTo({ url: '/pages/me/index?presence=1' }); return }
+    if (!this.data.ownPresence) { this.openPresenceSettings(); return }
     this.setData({ shoutBusy: true })
-    try { await api.request('presence.set', { ...this.data.ownPresence, shout: text }); this.setData({ shoutOpen: false, shoutText: '' }); await this.loadPeople(); await this.loadOwnPresence(); wx.showToast({ title: '附近喊话已更新', icon: 'success' }) }
+    try { await api.request('presence.set', { ...this.data.ownPresence, shout: text }); this.setData({ shoutOpen: false, shoutText: '' }); await this.loadOwnPresence(); wx.showToast({ title: '附近喊话已更新', icon: 'success' }) }
     catch (error) { api.toast(error) }
     finally { if (!this.disposed) this.setData({ shoutBusy: false }) }
   },
-  openPresenceSettings() { wx.navigateTo({ url: '/pages/me/index?presence=1' }) },
+  openPresenceSettings() { navigate('profile', { presence: true }) },
   selectPoint(id) {
     const item = this.data.items.find(value => value.id === id)
     if (!item) return
@@ -443,7 +545,7 @@ Page({
     }
   },
   returnToBrowse() {
-    if (this.data.viewMode === 'person') { const person = this.data.selectedPerson; this.relayout(this.panelStop === undefined ? 0 : this.panelStop, { viewMode: 'browse' }); this.setData({ selectedPerson: null, selectedId: 0, markers: cosplayerMarkersFor(this.data.cosplayers, 0) }); return }
+    if (this.data.viewMode === 'person') { const person = this.data.selectedPerson; this.relayout(this.panelStop === undefined ? 0 : this.panelStop, { viewMode: 'browse' }); this.setData({ selectedPerson: null, selectedId: 0, markers: this.peopleMarkers(this.data.cosplayers, 0) }); return }
     const item = this.data.selectedItem
     if (!item || this.data.viewMode !== 'detail') return
     clearTimeout(this.mapFitTimer)
@@ -473,9 +575,8 @@ Page({
       this.relayout(this.panelStop, {
         viewMode: 'browse', selectedItem: null, selectedPerson: null, selectedId: 0,
         latitude: demoLocation.latitude, longitude: demoLocation.longitude, scale: 15,
-        markers: this.data.feedMode === 'people' ? cosplayerMarkersFor(this.data.cosplayers, 0) : markersFor(this.data.items, 0)
+        markers: this.data.feedMode === 'people' ? this.peopleMarkers(this.data.cosplayers, 0) : markersFor(this.data.items, 0)
       })
-      if (this.map) this.map.moveToLocation(demoLocation)
       if (this.data.feedMode === 'people') this.loadPeople(); else this.fetchFeed()
       this.setData({ locating: false, locationGranted: true })
       wx.showToast({ title: '演示地图已定位到成都春熙路', icon: 'none' })
@@ -486,20 +587,18 @@ Page({
       success: location => {
         if (this.disposed) return
         clearTimeout(this.mapFitTimer)
-        this.relayout(this.panelStop, { viewMode: 'browse', selectedItem: null, selectedPerson: null, selectedId: 0, markers: this.data.feedMode === 'people' ? cosplayerMarkersFor(this.data.cosplayers, 0) : markersFor(this.data.items, 0) })
+        this.relayout(this.panelStop, { viewMode: 'browse', selectedItem: null, selectedPerson: null, selectedId: 0, markers: this.data.feedMode === 'people' ? this.peopleMarkers(this.data.cosplayers, 0) : markersFor(this.data.items, 0) })
         this.setData({ latitude: location.latitude, longitude: location.longitude, scale: 16, locationGranted: true })
         this.queryCenter = { latitude: location.latitude, longitude: location.longitude }
         if (this.data.feedMode === 'people') this.loadPeople(); else this.fetchFeed()
-        if (this.map) this.map.moveToLocation({ latitude: location.latitude, longitude: location.longitude })
       },
       fail: error => {
         if (this.disposed) return
         if (api.config.demoMode) {
           const demoLocation = { latitude: 30.6532, longitude: 104.0641 }
-          this.relayout(this.panelStop, { viewMode: 'browse', selectedItem: null, selectedPerson: null, selectedId: 0, markers: this.data.feedMode === 'people' ? cosplayerMarkersFor(this.data.cosplayers, 0) : markersFor(this.data.items, 0) })
+          this.relayout(this.panelStop, { viewMode: 'browse', selectedItem: null, selectedPerson: null, selectedId: 0, markers: this.data.feedMode === 'people' ? this.peopleMarkers(this.data.cosplayers, 0) : markersFor(this.data.items, 0) })
           this.setData({ latitude: demoLocation.latitude, longitude: demoLocation.longitude, scale: 16, locationGranted: true })
           this.queryCenter = demoLocation
-          if (this.map) this.map.moveToLocation(demoLocation)
           wx.showToast({ title: '演示模式：已定位到春熙路', icon: 'none' })
           return
         }
@@ -530,13 +629,14 @@ Page({
       const items = this.assignMarkers([...new Map(combined.map(row => [row.id, row])).values()])
       this.posts = items
       const selectedItem = items.find(row => row.id === this.data.selectedId) || null
+      if (this.data.feedMode !== 'posts') { this.setData({ items, cursor: result.cursor }); return }
       this.setData({ items, cursor: result.cursor, selectedItem, selectedId: selectedItem?.id || 0, viewMode: selectedItem ? this.data.viewMode : 'browse', markers: markersFor(items, selectedItem?.id || 0), areaDirty: false })
       if (!append) { this.resetScroll(); this.scheduleMapFit() }
     } catch (error) { if (!this.disposed && version === this.feedVersion) this.setData({ dataError: error.message }) }
     finally { if (!this.disposed && version === this.feedVersion) this.setData({ loading: false }) }
   },
   reload() { if (this.data.feedMode === 'people') this.loadPeople(); else this.fetchFeed() },
-  loadMore() { this.fetchFeed(true) },
+  loadMore() { if (this.data.feedMode === 'posts') this.fetchFeed(true) },
   regionChanged(event) {
     if (api.config.demoMode || (event.type !== 'end' && event.detail?.type !== 'end') || (event.causedBy !== 'gesture' && event.detail?.causedBy !== 'gesture')) return
     this.map?.getCenterLocation({ success: center => { this.queryCenter = { latitude: center.latitude, longitude: center.longitude }; if (!this.disposed) this.setData({ areaDirty: true }) } })

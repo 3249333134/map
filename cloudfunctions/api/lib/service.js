@@ -53,7 +53,7 @@ function createService({ repo, moderation, files, admins = [], now = Date.now, r
     const frameMedia = media?.status === 'approved' ? await Promise.all((user.avatarFrameMediaIds || []).map(id => repo.get('media', id))) : []
     const fileIds = [media?.status === 'approved' ? media.fileId : '', ...frameMedia.map(row => row && (row.status === 'ready' || (row._id === user.avatarMediaId && row.status === 'approved')) ? row.fileId : '')].filter(Boolean)
     const urls = fileIds.length ? await files.urls(fileIds) : {}
-    const avatarFrameUrls = frameMedia.map(row => row && (row.status === 'ready' || (row._id === user.avatarMediaId && row.status === 'approved')) ? urls[row.fileId] || '' : '').filter(Boolean)
+    const avatarFrameUrls = frameMedia.map(row => row && (row.status === 'ready' || (row._id === user.avatarMediaId && row.status === 'approved')) ? urls[row.fileId] || '' : '')
     return { id: user._id, nickname: user.nickname, avatarKey: user.avatarKey || 'mika', avatarVersion: media?.status === 'approved' ? `${media._id}:${(user.avatarFrameMediaIds || []).join(',')}` : user.avatarKey || 'mika', avatarUrl: avatarFrameUrls[0] || (media?.status === 'approved' ? urls[media.fileId] || '' : ''), avatarFrameUrls, tags: user.tags || [] }
   }
   async function nearby(input, uid) {

@@ -48,13 +48,24 @@ def load_service_env():
             if key in ('AGNES_API_KEY', 'AGNES_BASE_URL') and key not in os.environ:
                 os.environ[key] = value
 
-import numpy as np
-import onnxruntime as ort
-import torch
-from PIL import Image
+np = None
+ort = None
+torch = None
+Image = None
+legacy = None
+cnf = None
 
-import legacy
-from module.flow import cnf
+
+def load_local_dependencies():
+    """Load the optional, heavyweight local model only when it is requested."""
+    global np, ort, torch, Image, legacy, cnf
+    import numpy as _np
+    import onnxruntime as _ort
+    import torch as _torch
+    from PIL import Image as _Image
+    import legacy as _legacy
+    from module.flow import cnf as _cnf
+    np, ort, torch, Image, legacy, cnf = _np, _ort, _torch, _Image, _legacy, _cnf
 
 WEIGHTS = os.path.join(BASE_DIR, 'weights')
 DATA = os.path.join(BASE_DIR, 'data')
@@ -90,6 +101,7 @@ def clamp(value, low, high):
 
 class StyleFlowGenerator:
     def __init__(self):
+        load_local_dependencies()
         self.lock = threading.Lock()
         self.cache = {}
         started = time.time()
@@ -123,7 +135,6 @@ class StyleFlowGenerator:
         ]
         self.seed_count = len(self.all_w)
 
-    @torch.no_grad()
     def _flow_w_to_z(self, w, attributes, lighting):
         w = torch.Tensor(w)
         att = torch.from_numpy(np.asarray(attributes, dtype=np.float32)).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
@@ -132,7 +143,6 @@ class StyleFlowGenerator:
         zero_padding = torch.zeros(1, 18, 1)
         return self.prior(w, features, zero_padding)[0].clone().detach()
 
-    @torch.no_grad()
     def _flow_z_to_w(self, z, attributes, lighting):
         att = torch.Tensor(np.asarray(attributes, dtype=np.float32)).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
         light = torch.Tensor(lighting)
@@ -140,13 +150,11 @@ class StyleFlowGenerator:
         zero_padding = torch.zeros(1, 18, 1)
         return self.prior(z, features, zero_padding, True)[0].clone().detach()
 
-    @torch.no_grad()
     def _synthesis(self, w):
         image = self.G.synthesis(torch.Tensor(w), noise_mode='const', force_fp32=True)
         image = (image.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
         return image[0].cpu().numpy().copy()
 
-    @torch.no_grad()
     def _cartoon(self, rgb):
         # AnimeGANv3 输入输出都是 NHWC：输入 0..1，输出 -1..1
         face = Image.fromarray(rgb).resize((512, 512), Image.LANCZOS)
@@ -155,7 +163,6 @@ class StyleFlowGenerator:
         out = np.clip((out + 1.0) / 2.0, 0.0, 1.0)
         return (out * 255).astype(np.uint8)
 
-    @torch.no_grad()
     def _resize(self, image, size):
         tensor = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).float()
         tensor = torch.nn.functional.interpolate(tensor, size=(size, size), mode='bicubic', align_corners=False)
@@ -320,6 +327,7 @@ class Handler(BaseHTTPRequestHandler):
                     data = response.read()
             else:
                 raise RuntimeError('图像服务没有返回图片，请稍后重试')
+            from PIL import Image
             sheet = Image.open(io.BytesIO(data)).convert('RGB')
             width, height = sheet.size
             frames = []
@@ -335,9 +343,9 @@ class Handler(BaseHTTPRequestHandler):
                     bounds = frame.getbbox()
                     if bounds:
                         frame = frame.crop(bounds)
-                    frame.thumbnail((72, 88), Image.Resampling.NEAREST)
-                    canvas = Image.new('RGBA', (88, 104), (0, 0, 0, 0))
-                    canvas.alpha_composite(frame, ((88 - frame.width) // 2, 104 - frame.height))
+                    frame.thumbnail((144, 176), Image.Resampling.NEAREST)
+                    canvas = Image.new('RGBA', (176, 208), (0, 0, 0, 0))
+                    canvas.alpha_composite(frame, ((176 - frame.width) // 2, 208 - frame.height))
                     output = io.BytesIO()
                     canvas.save(output, format='PNG', optimize=True)
                     frames.append(base64.b64encode(output.getvalue()).decode('ascii'))
@@ -359,6 +367,9 @@ class Handler(BaseHTTPRequestHandler):
         query = {key: value[-1] for key, value in parse_qs(parsed.query).items()}
         try:
             if parsed.path == '/health':
+                if os.environ.get('AGNES_API_KEY', '').strip():
+                    self._json(200, {'ok': True, 'ready': True, 'mode': 'agnes'})
+                    return
                 generator = get_generator()
                 self._json(200, {
                     'ok': True,
@@ -395,10 +406,11 @@ def main():
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--host', default='127.0.0.1')
     args = parser.parse_args()
-    torch.set_grad_enabled(False)
     if os.environ.get('AGNES_API_KEY', '').strip():
-        print('使用 Agnes AI 云端动漫图像生成 API。')
+        print('使用 Agnes AI 云端动漫图像生成 API（轻量模式）。')
     else:
+        load_local_dependencies()
+        torch.set_grad_enabled(False)
         print('加载本地人像模型中（首次大约需要 10-30 秒）...')
         get_generator()
     server = ThreadingHTTPServer((args.host, args.port), Handler)

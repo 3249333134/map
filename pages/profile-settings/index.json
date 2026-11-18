@@ -1,0 +1,7 @@
+{
+  "usingComponents": { "avatar-preview": "/components/avatar-preview/index", "avatar-head": "/components/avatar-head/index" },
+  "navigationStyle": "default",
+  "navigationBarTitleText": "我的资料与地图设置",
+  "navigationBarBackgroundColor": "#f4f4f2",
+  "backgroundColor": "#f4f4f2"
+}

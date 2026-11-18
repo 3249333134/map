@@ -32,4 +32,3 @@
   <view wx:if="{{loading}}" class="muted section">正在加载…</view>
   <button wx:if="{{cursor && !loading}}" class="secondary" bindtap="loadMore">更多消息</button>
 </view>
-<bottom-nav selected="message" />

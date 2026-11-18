@@ -27,5 +27,9 @@
   </view>
 
   <view wx:if="{{error}}" class="error-card">{{error}}</view>
-  <view class="footer"><button class="save-button" bindtap="save" loading="{{saving}}" disabled="{{saving || !frames.length}}">使用这个形象</button></view>
+  <view class="footer">
+    <view wx:if="{{frames.length}}" class="field"><text class="label">形象名称</text><input value="{{avatarName}}" bindinput="inputAvatarName" maxlength="20" placeholder="给这个形象起个名字" /></view>
+    <button class="save-button" bindtap="save" loading="{{saving}}" disabled="{{saving || !frames.length}}">保存名称并使用</button>
+  </view>
 </view>
+<avatar-preview open="{{previewOpen}}" frames="{{frames}}" theme="{{style}}" bind:close="closePreview" />

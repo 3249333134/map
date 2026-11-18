@@ -3,5 +3,5 @@
   "navigationBarTitleText": "我的形象",
   "navigationBarBackgroundColor": "#f4f4f2",
   "navigationBarTextStyle": "black",
-  "usingComponents": {}
+  "usingComponents": { "avatar-preview": "/components/avatar-preview/index" }
 }

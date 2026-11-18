@@ -1,5 +1,5 @@
-<view class="detail">
-  <view wx:if="{{item.status && item.status !== 'published'}}" class="notice">{{item.statusText}} {{item.moderationError}}<button wx:if="{{item.mine && item.status === 'review_error'}}" data-action="content.reviewRetry" bindtap="action" disabled="{{busy}}">重试审核</button></view>
+<view class="detail {{busy ? 'detail-busy' : ''}}">
+  <view wx:if="{{item.status && item.status !== 'published'}}" class="notice">{{item.statusText}} {{item.moderationError}}<button class="notice-retry" wx:if="{{item.mine && item.status === 'review_error'}}" data-action="content.reviewRetry" bindtap="action" disabled="{{busy}}">重试审核</button></view>
 
   <view class="detail-head">
     <view class="chips">
@@ -13,14 +13,14 @@
 
   <view class="body">{{item.text}}</view>
 
-  <view wx:if="{{item.images.length}}" class="pictures"><image wx:for="{{item.images}}" wx:key="*this" src="{{item}}" data-url="{{item}}" mode="aspectFill" bindtap="preview" /></view>
+  <view wx:if="{{item.images.length}}" class="pictures"><image class="detail-image" wx:for="{{item.images}}" wx:key="*this" src="{{item}}" data-url="{{item}}" mode="aspectFill" bindtap="preview" /></view>
 
   <view wx:if="{{item.kind === 'activity'}}" class="activity-card">
     <view class="activity-title">活动信息</view>
     <view class="activity-line">{{item.timeText}}</view>
     <view class="activity-line">{{item.joinedCount}} / {{item.capacity}} 人报名 · {{item.cancelled ? '已取消' : item.activityClosed ? '暂不可报名' : '可报名'}}</view>
     <view class="activity-progress"><view class="activity-fill" style="width: {{item.capacity ? (item.joinedCount * 100 / item.capacity > 100 ? 100 : item.joinedCount * 100 / item.capacity) : 0}}%"></view></view>
-    <button wx:if="{{!item.mine && item.status === 'published'}}" class="{{item.joined ? 'secondary' : 'primary'}}" data-action="activity.signup" bindtap="action" disabled="{{busy || (!item.joined && item.activityClosed)}}">{{item.joined ? '取消报名' : '一键报名'}}</button>
+    <button wx:if="{{!item.mine && item.status === 'published'}}" class="{{item.joined ? 'secondary' : 'primary'}} {{!item.joined && item.activityClosed ? 'signup-disabled' : ''}}" data-action="activity.signup" bindtap="action" disabled="{{busy || (!item.joined && item.activityClosed)}}">{{item.joined ? '取消报名' : '一键报名'}}</button>
   </view>
 
   <view wx:if="{{item.status === 'published'}}" class="actions">
@@ -37,8 +37,8 @@
   <view wx:if="{{item.status === 'published'}}" class="comments">
     <view class="subheading">评论 <text class="comment-count">{{item.commentCount || 0}}</text></view>
     <view wx:for="{{comments}}" wx:key="_id" class="comment"><text class="name">{{item.nickname}}</text><text class="comment-text">{{item.text}}</text></view>
-    <view wx:if="{{commentError}}" class="notice">{{commentError}}<button bindtap="loadComments">重试</button></view>
+    <view wx:if="{{commentError}}" class="notice">{{commentError}}<button class="notice-retry" bindtap="loadComments">重试</button></view>
     <button wx:if="{{cursor}}" class="more-comments" data-more="{{true}}" bindtap="loadComments" loading="{{commentsLoading}}">更多评论</button>
-    <view class="editor"><input value="{{comment}}" bindinput="input" maxlength="500" placeholder="写一句评论…" /><button data-action="comment.create" bindtap="action" disabled="{{busy || !comment}}">发送</button></view>
+    <view class="editor"><input class="comment-input" value="{{comment}}" bindinput="input" maxlength="500" placeholder="写一句评论…" /><button class="comment-send {{busy || !comment ? 'comment-send-disabled' : ''}}" data-action="comment.create" bindtap="action" disabled="{{busy || !comment}}">发送</button></view>
   </view>
 </view>

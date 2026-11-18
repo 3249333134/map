@@ -1,8 +1,24 @@
 <view class="screen {{keyboardHeight ? 'keyboard-open' : ''}}" style="--footer-height: {{layout.footer}}px; --handle-height: {{layout.handle}}px; --search-height: {{layout.search}}px; --panel-gap: {{layout.gap}}px;">
   <map wx:if="{{mapVisible}}" id="main-map" class="map" latitude="{{latitude}}" longitude="{{longitude}}" scale="{{scale}}" markers="{{markers}}" show-location="{{locationGranted}}" enable-rotate="{{false}}" bindtap="mapTap" bindregionchange="regionChanged" bindmarkertap="markerTap" bindcallouttap="markerTap" binderror="mapFailed" bindupdated="mapUpdated" />
   <button wx:if="{{areaDirty}}" class="search-area" style="top: {{topInset}}px;" bindtap="reload">查看这片区域</button>
-  <view wx:if="{{feedMode === 'people' && viewMode === 'browse'}}" class="movement-hint" style="top: {{topInset + 12}}px;">{{ownPresence && ownPresence.active ? '点地图位置，我的形象会走过去 · 点角色握手' : '点地图位置，让我的形象出发'}}</view>
-  <view wx:if="{{handshakeText}}" class="handshake-toast">🤝 {{handshakeText}}</view>
+  <button wx:if="{{!ownPresence && !areaDirty && !mapError && !keyboardHeight && feedMode === 'people' && viewMode === 'browse'}}" class="map-presence-action" style="top: {{topInset}}px;" bindtap="openPresenceSettings">
+    <t-icon name="location" size="16px" />让形象上图
+  </button>
+  <view wx:if="{{encounter}}" class="encounter-overlay" style="padding-top: {{topInset + 8}}px; --encounter-duration: {{encounter.duration}}ms;" catchtap="encounterTap" catchtouchmove="encounterTap">
+    <view class="encounter-card" aria-role="status">
+      <text class="encounter-title">握手成功</text>
+      <view class="encounter-stage">
+        <view wx:for="{{encounter.avatars}}" wx:key="id" class="encounter-person">
+          <view class="encounter-sprite {{index === 0 ? 'encounter-left' : 'encounter-right'}}">
+            <image class="encounter-image" src="{{item.portrait}}" mode="aspectFit" />
+            <image wx:if="{{item.action}}" class="encounter-image encounter-action" src="{{item.action}}" mode="aspectFit" />
+          </view>
+          <text class="encounter-name">{{item.name}}</text>
+        </view>
+        <view class="encounter-impact" aria-hidden="true">🙌</view>
+      </view>
+    </view>
+  </view>
 
   <view wx:if="{{mapError}}" class="map-error" style="top: {{topInset}}px;">
     <text>地图暂时未加载，请检查网络</text>
@@ -28,12 +44,21 @@
     <view wx:if="{{feedMode === 'posts'}}" class="categories">
       <button wx:for="{{categories}}" wx:key="*this" class="category {{activeCategory === item ? 'active' : ''}}" data-category="{{item}}" bindtap="category">{{item}}</button>
     </view>
+    <view wx:if="{{feedMode === 'people'}}" class="own-profile-pinned" bindtap="openOwnSettings" aria-role="button" aria-label="我的资料与地图设置">
+      <view class="person-avatar"><avatar-head src="{{ownProfile.avatarUrl || '/static/avatars/' + (ownProfile.avatarKey || 'mika') + '.png'}}" full-body="{{!!ownProfile.avatarFrameUrls.length}}" /></view>
+      <view class="person-copy">
+        <view class="person-name">{{ownProfile.nickname || '我的资料'}}<text class="friend-chip">你</text></view>
+        <view class="person-shout">{{ownPresence ? (ownPresence.shout || '在附近逛逛，欢迎来认识我') : '设置形象、位置和附近喊话'}}</view>
+        <view class="person-place">{{ownPresence ? ownPresence.place : '当前未在地图上出现'}}</view>
+      </view>
+      <t-icon name="chevron-right" size="18px" color="#62625a" />
+    </view>
     <scroll-view class="content-scroll" scroll-y="{{!dragging}}" enhanced show-scrollbar="{{false}}" scroll-top="{{scrollTop}}" scroll-into-view="{{scrollIntoView}}" bindscroll="scrolled" bindscrolltolower="loadMore">
       <view wx:if="{{demoMode}}" class="demo-note">演示数据 · 只保存在本机</view>
       <view wx:if="{{dataError}}" class="empty"><text>{{dataError}}</text><button class="reset-filters" bindtap="reload">重试</button></view>
       <view wx:if="{{feedMode === 'people' && cosplayers.length}}" class="items person-items">
-        <view wx:for="{{cosplayers}}" wx:key="id" class="person-row {{selectedId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectPerson" aria-role="button" aria-label="查看{{item.avatar.nickname}}的主页">
-          <view class="person-avatar-wrap"><image class="person-avatar" src="{{item.avatarPath || item.avatar.avatarUrl || '/static/avatars/' + item.avatar.avatarKey + '.png'}}" mode="aspectFill" /><view wx:if="{{!item.isMine}}" class="online-dot" /></view>
+        <view wx:for="{{cosplayers}}" wx:key="id" wx:if="{{!item.isMine}}" class="person-row {{selectedId === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="selectPerson" aria-role="button" aria-label="查看{{item.avatar.nickname}}的主页">
+          <view class="person-avatar-wrap"><view class="person-avatar"><avatar-head src="{{item.avatarPath || item.avatar.avatarUrl || '/static/avatars/' + item.avatar.avatarKey + '.png'}}" full-body="{{!!item.avatar.avatarFrameUrls.length}}" /></view><view wx:if="{{!item.isMine}}" class="online-dot" /></view>
           <view class="person-copy"><view class="person-name">{{item.avatar.nickname}}<text wx:if="{{item.isMine}}" class="friend-chip">你</text><text wx:if="{{item.friendStatus === 'accepted'}}" class="friend-chip">好友</text></view><view class="person-shout">{{item.shout || '在附近逛逛，欢迎来认识我'}}</view><view class="person-place">{{item.place}}</view></view>
           <t-icon name="chevron-right" size="18px" color="#9a9a96" />
         </view>
@@ -48,7 +73,7 @@
       </view>
       <view wx:if="{{feedMode === 'people' && !cosplayers.length && !loading && !dataError}}" class="empty"><view>附近还没有正在地图上的同好</view><text>开启地图出现，或留一句喊话，让同城 Coser 找到你。</text><button class="reset-filters" bindtap="openPresenceSettings">开启地图出现</button></view>
       <view wx:if="{{feedMode === 'posts' && !items.length && !loading && !dataError}}" class="empty"><view>这里还没有动态</view><text>换个关键词、地图区域，或发布第一条动态。</text><button class="reset-filters" bindtap="resetFilters">清除筛选</button></view>
-      <view wx:if="{{loading}}" class="demo-note">正在加载…</view><button wx:if="{{cursor && !loading}}" class="reset-filters" bindtap="loadMore">加载更多</button>
+      <view wx:if="{{loading}}" class="demo-note">正在加载…</view><button wx:if="{{feedMode === 'posts' && cursor && !loading}}" class="reset-filters" bindtap="loadMore">加载更多</button>
     </scroll-view>
     </view>
     <view wx:if="{{viewMode === 'detail' && selectedItem}}" class="detail-content">
@@ -62,7 +87,7 @@
     <view wx:if="{{viewMode === 'person' && selectedPerson}}" class="person-detail">
       <view class="detail-toolbar"><button class="back-to-browse" bindtap="returnToBrowse"><t-icon name="chevron-left" size="18px" /><text>返回地图</text></button></view>
       <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}"><view class="profile-card">
-        <image class="profile-avatar" src="{{selectedPerson.avatarPath || selectedPerson.avatar.avatarUrl || '/static/avatars/' + selectedPerson.avatar.avatarKey + '.png'}}" mode="aspectFill" />
+        <view class="profile-avatar"><avatar-head src="{{selectedPerson.avatarPath || selectedPerson.avatar.avatarUrl || '/static/avatars/' + selectedPerson.avatar.avatarKey + '.png'}}" full-body="{{!!selectedPerson.avatar.avatarFrameUrls.length}}" /></view>
         <view class="profile-heading"><text class="profile-name">{{selectedPerson.avatar.nickname}}<text wx:if="{{selectedPerson.isMine}}" class="self-mark">· 你</text></text><text class="profile-location">{{selectedPerson.place}} · {{selectedPerson.movementMode === 'fuzzy' ? '约500米模糊跟随' : selectedPerson.movementMode === 'virtual' ? '虚拟漫游' : selectedPerson.mode === 'current' ? '临时位置' : '选定地点'}}</text></view>
         <view class="profile-tags"><text wx:for="{{selectedPerson.avatar.tags}}" wx:key="*this" class="profile-tag">{{item}}</text><text wx:if="{{!selectedPerson.avatar.tags.length}}" class="profile-tag">Cos 同好</text></view>
         <view class="profile-shout"><text class="profile-shout-label">附近喊话</text><text>{{selectedPerson.shout || '在附近逛逛，欢迎来认识我。'}}</text></view>
@@ -71,13 +96,5 @@
         <view class="profile-expiry">地图出现将在 {{presenceExpiryText}} 后自动结束</view>
       </view></scroll-view>
     </view>
-  </view>
-  <view class="bottom-bar {{safeBottom ? 'with-home-indicator' : ''}}" style="height: {{bottomBarHeight}}px; padding-bottom: {{safeBottom}}px;">
-    <t-tab-bar value="home" fixed="{{false}}" split="{{false}}" bordered="{{false}}" safe-area-inset-bottom="{{false}}" bind:change="navigationTap" t-class="navigation-bar">
-      <t-tab-bar-item wx:for="{{navigation}}" wx:key="id" value="{{item.id}}" icon="{{item.icon || ''}}" badge-props="{{item.id === 'message' ? unreadBadge : emptyBadge}}" aria-label="{{item.label}}{{item.id === 'home' ? '，当前页面' : ''}}" t-class="navigation-item {{item.id === 'publish' ? 'navigation-publish' : 'navigation-standard'}}" custom-style="height: {{item.id === 'publish' ? layout.footer + 8 : layout.footer}}px; margin: {{item.id === 'publish' ? '-8px 0 0' : '0'}}; padding: 0;">
-        <view wx:if="{{item.id === 'publish'}}" slot="icon" class="publish-circle"><t-icon name="add" size="26px" color="#fff" /></view>
-        <text wx:if="{{item.id !== 'publish'}}" class="navigation-label">{{item.label}}</text>
-      </t-tab-bar-item>
-    </t-tab-bar>
   </view>
 </view>

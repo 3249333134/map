@@ -133,14 +133,17 @@ test('错误提示避开顶部胶囊，尺寸变化时终止旧手势', () => {
     assert.equal(instance.data.dragging, false)
   } finally { delete wx.getMenuButtonBoundingClientRect }
 })
-test('底栏进入四个真实功能页，保留地图浏览状态', () => {
-  const urls = []
+test('四个底栏标签同级切换，发布单独打开，保留地图浏览状态', () => {
+  const tabs = []
+  const stacked = []
   global.getCurrentPages = () => [{ route: 'pages/index/index' }]
-  wx.navigateTo = options => urls.push(options.url)
+  wx.switchTab = options => tabs.push(options.url)
+  wx.navigateTo = options => stacked.push(options.url)
   const instance = page()
   const before = structuredClone(instance.data)
   for (const id of ['home', 'service', 'publish', 'message', 'profile']) instance.navigationTap({ detail: { value: id } })
-  assert.deepEqual(urls, ['/pages/activities/index', '/pages/publish/index', '/pages/notifications/index', '/pages/me/index'])
+  assert.deepEqual(tabs, ['/pages/activities/index', '/pages/notifications/index', '/pages/me/index'])
+  assert.deepEqual(stacked, ['/pages/publish/index'])
   assert.deepEqual(instance.data, before)
 })
 test('键盘开启时面板位于键盘上方，关闭后保持结果展开', () => {

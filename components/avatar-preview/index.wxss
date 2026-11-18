@@ -1,0 +1,11 @@
+.preview-overlay { position: fixed; inset: 0; z-index: 200; background: #162b32; }
+.scenery { position: absolute; left: -10000px; top: 0; width: 240px; height: 480px; pointer-events: none; }
+.scene-background { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+.preview-toolbar { position: absolute; left: 16px; right: 16px; z-index: 2; display: flex; align-items: center; justify-content: space-between; color: #fff; font-size: 14px; }
+.preview-toolbar button { width: auto; min-width: 44px; height: 44px; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: #20373e; color: #fff; font-size: 14px; line-height: 44px; }
+.preview-toolbar button::after { border: 0; }
+.sprite-swiper { position: absolute; z-index: 1; top: 22%; left: 0; right: 0; height: 53%; }
+.sprite-stage { display: flex; width: 100%; height: 100%; align-items: flex-end; justify-content: center; }
+.sprite-stage image { width: 65%; height: 100%; image-rendering: pixelated; }
+.scene-name { position: absolute; z-index: 2; bottom: calc(40px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; color: #fff; font-size: 13px; }
+.preview-error { position: absolute; z-index: 2; top: 50%; left: 20px; right: 20px; padding: 12px; border-radius: 12px; background: #20373e; color: #fff; text-align: center; font-size: 14px; }

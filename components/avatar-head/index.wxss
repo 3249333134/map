@@ -1,0 +1,3 @@
+:host { display: block; width: 100%; height: 100%; }
+.crop-canvas { position: fixed; left: -10000px; top: 0; width: 176px; height: 208px; pointer-events: none; }
+.head-image { display: block; width: 100%; height: 100%; image-rendering: pixelated; }

@@ -1,1 +1,1 @@
-{ "navigationStyle": "default", "navigationBarTitleText": "消息", "navigationBarBackgroundColor": "#f4f4f2", "disableScroll": false, "enablePullDownRefresh": true, "backgroundColor": "#f4f4f2", "usingComponents": { "bottom-nav": "/components/bottom-nav/index", "t-icon": "tdesign-miniprogram/icon/icon" } }
+{ "navigationStyle": "default", "navigationBarTitleText": "消息", "navigationBarBackgroundColor": "#f4f4f2", "disableScroll": false, "enablePullDownRefresh": true, "backgroundColor": "#f4f4f2", "usingComponents": { "t-icon": "tdesign-miniprogram/icon/icon" } }

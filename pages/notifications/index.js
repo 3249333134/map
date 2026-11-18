@@ -1,10 +1,11 @@
 const api = require('../../utils/api')
+const { syncTabBar } = require('../../utils/navigation')
 const labels = { like: '有人赞了你的内容', comment: '你的内容有新评论', signup: '有人报名了你的活动', withdraw: '有人取消了报名', activity_cancel: '你报名的活动已取消', friend_request: '想和你成为好友', friend_accepted: '通过了你的好友申请' }
 const icons = { like: 'heart', comment: 'chat', signup: 'user', withdraw: 'user', activity_cancel: 'info-circle', friend_request: 'user', friend_accepted: 'check-circle' }
 const tones = { like: 'tone-like', comment: 'tone-comment', signup: 'tone-friend', withdraw: 'tone-plain', activity_cancel: 'tone-warm', friend_request: 'tone-friend', friend_accepted: 'tone-friend' }
 Page({
   data: { items: [], cursor: null, loading: false, error: '', unread: 0 },
-  onShow() { this.load() }, onUnload() { this.disposed = true }, onPullDownRefresh() { this.load().finally(() => wx.stopPullDownRefresh()) }, onReachBottom() { if (this.data.cursor) this.loadMore() }, loadMore() { this.load(true) },
+  onShow() { syncTabBar(this, 'message'); this.load() }, onUnload() { this.disposed = true }, onPullDownRefresh() { this.load().finally(() => wx.stopPullDownRefresh()) }, onReachBottom() { if (this.data.cursor) this.loadMore() }, loadMore() { this.load(true) },
   async load(more = false) {
     if (this.data.loading) return
     this.setData({ loading: true, error: '' })

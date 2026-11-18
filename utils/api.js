@@ -1,4 +1,5 @@
 const config = require('../config/cloud')
+const { navigate } = require('./navigation')
 const demo = require('./demo-store')
 function error(code, message) { return Object.assign(new Error(message), { code }) }
 async function request(action, input = {}) {
@@ -16,7 +17,7 @@ async function ensureProfile() {
   const profile = await request('user.me')
   if (profile && !profile.blocked) return profile
   const result = await wx.showModal({ title: '设置昵称', content: '设置昵称后即可发布、互动和报名，不需要手机号。', confirmText: '去设置' })
-  if (result.confirm) wx.navigateTo({ url: '/pages/me/index?setup=1' })
+  if (result.confirm) navigate('profile', { setup: true })
   throw error('PROFILE', profile?.blocked ? '账号暂不能操作' : '请先设置昵称')
 }
 function requestId() { return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}` }

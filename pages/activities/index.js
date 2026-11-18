@@ -1,7 +1,8 @@
 const api = require('../../utils/api')
+const { syncTabBar } = require('../../utils/navigation')
 Page({
   data: { items: [], cursor: null, loading: false, error: '', query: '' },
-  onShow() { this.load() }, onUnload() { this.disposed = true; this.version = (this.version || 0) + 1 },
+  onShow() { syncTabBar(this, 'service'); this.load() }, onUnload() { this.disposed = true; this.version = (this.version || 0) + 1 },
   onPullDownRefresh() { this.load().finally(() => wx.stopPullDownRefresh()) }, onReachBottom() { if (this.data.cursor) this.loadMore() },
   input(event) { this.setData({ query: event.detail.value }) }, search() { this.load() },
   loadMore() { this.load(true) },

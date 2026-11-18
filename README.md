@@ -30,6 +30,12 @@ AGNES_API_KEY=你的 API 密钥
 AGNES_BASE_URL=https://apihub.agnes-ai.com/v1
 ```
 
+首次先准备轻量服务环境（仅安装 Pillow，不安装本地 PyTorch 模型）：
+
+```bash
+npm run avatar-setup
+```
+
 然后启动服务：
 
 ```bash

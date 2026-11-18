@@ -39,6 +39,10 @@
         "type": "folder"
       },
       {
+        "value": "server",
+        "type": "folder"
+      },
+      {
         "value": "package.json",
         "type": "file"
       },

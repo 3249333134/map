@@ -1,0 +1,8 @@
+<view wx:if="{{visible}}" class="bottom-bar {{(inset >= 0 ? inset : safeInset) ? 'with-home-indicator' : ''}}" style="--footer-height: {{footer}}px; height: {{footer + (inset >= 0 ? inset : safeInset)}}px; padding-bottom: {{inset >= 0 ? inset : safeInset}}px;">
+  <t-tab-bar value="{{selected}}" fixed="{{false}}" split="{{false}}" bordered="{{false}}" safe-area-inset-bottom="{{false}}" bind:change="tap" t-class="navigation-bar">
+    <t-tab-bar-item wx:for="{{items}}" wx:key="id" value="{{item.id}}" icon="{{item.icon || ''}}" badge-props="{{item.id === 'message' ? unreadBadge : emptyBadge}}" aria-label="{{item.label}}{{item.id === selected ? '，当前页面' : ''}}" t-class="navigation-item {{item.id === 'publish' ? 'navigation-publish' : 'navigation-standard'}}" custom-style="height: {{item.id === 'publish' ? footer + 8 : footer}}px; margin: {{item.id === 'publish' ? '-8px 0 0' : '0'}}; padding: 0;">
+      <view wx:if="{{item.id === 'publish'}}" slot="icon" class="publish-circle"><t-icon name="add" size="26px" color="#fff" /></view>
+      <text wx:if="{{item.id !== 'publish'}}" class="navigation-label">{{item.label}}</text>
+    </t-tab-bar-item>
+  </t-tab-bar>
+</view>

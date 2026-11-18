@@ -1,5 +1,7 @@
 const api = require('../../utils/api')
 const config = require('../../config/cloud')
+const { navigate } = require('../../utils/navigation')
+const library = require('../../utils/avatar-library')
 
 const styles = [
   { id: 'adventure', name: '热血冒险', hint: '海贼王式的热血冒险感', color: '#f5a14b' },
@@ -11,7 +13,7 @@ Page({
   data: {
     server: config.avatarServer || 'http://127.0.0.1:8765', styles,
     style: 'fantasy', franchise: '', character: '', prompt: '', referencePath: '',
-    frames: [], frameIndex: 0, generating: false, saving: false, error: ''
+    frames: [], avatarName: '', frameIndex: 0, previewOpen: false, generating: false, saving: false, error: ''
   },
   onLoad() { this.loadProfile() },
   onUnload() { this.disposed = true; clearInterval(this.frameTimer) },
@@ -22,6 +24,7 @@ Page({
   selectStyle(event) { this.setData({ style: event.currentTarget.dataset.id, error: '' }) },
   inputFranchise(event) { this.setData({ franchise: event.detail.value }) },
   inputCharacter(event) { this.setData({ character: event.detail.value }) },
+  inputAvatarName(event) { this.setData({ avatarName: event.detail.value }) },
   inputPrompt(event) { this.setData({ prompt: event.detail.value }) },
   async chooseReference() {
     try {
@@ -37,7 +40,8 @@ Page({
   },
   removeReference() { this.setData({ referencePath: '', referenceDataUrl: '' }) },
   generate() {
-    if (this.data.generating) return
+    if (this.data.generating || this.data.saving) return
+    this.libraryEntry = null
     this.setData({ generating: true, error: '', frames: [], frameIndex: 0 })
     clearInterval(this.frameTimer)
     wx.request({
@@ -56,45 +60,43 @@ Page({
         Promise.all(frames.map((data, index) => new Promise((resolve, reject) => {
           const filePath = `${wx.env.USER_DATA_PATH}/anime-sprite-${Date.now()}-${index}.png`
           wx.getFileSystemManager().writeFile({ filePath, data, encoding: 'base64', success: () => resolve(filePath), fail: reject })
-        }))).then(paths => {
+        }))).then(async paths => {
           if (this.disposed) return
+          const name = this.data.avatarName.trim() || this.data.character.trim() || '新形象'
+          this.libraryEntry = await library.add(paths, name)
+          if (this.disposed) return
+          paths = this.libraryEntry.frames
+          this.setData({ avatarName: name })
           this.setData({ frames: paths, frameIndex: 0, generating: false })
           this.frameTimer = setInterval(() => this.setData({ frameIndex: (this.data.frameIndex + 1) % paths.length }), 500)
-        }).catch(() => this.finishError('像素动作帧写入失败，请重试'))
+        }).catch(() => this.finishError('形象保存失败，请检查本机存储空间后重试'))
       },
-      fail: () => this.finishError(`连接不到生成服务（${this.data.server}）。请在电脑上启动 npm run avatar-server。`)
+      fail: error => {
+        const message = error?.errMsg || ''
+        if (/domain|域名|https|ssl|certificate/i.test(message)) {
+          this.finishError('生成服务地址被微信拦截。模拟器需关闭本地项目的域名校验后重新编译，真机需使用已配置的 HTTPS 服务。')
+        } else if (/timeout|timed out|超时/i.test(message)) {
+          this.finishError('等待形象生成超时。请稍后重试，或检查本机生成服务与 Agnes AI 的网络连接。')
+        } else {
+          this.finishError(`连接不到生成服务（${this.data.server}）。如果在模拟器中，请确认电脑上的生成服务正在运行（npm run avatar-server）。`)
+        }
+      }
     })
   },
   finishError(message) { if (!this.disposed) this.setData({ generating: false, error: message }) },
-  previewImage() { if (this.data.frames.length) wx.previewImage({ urls: this.data.frames }) },
-  async saveFile(path) {
-    return new Promise(resolve => wx.getFileSystemManager().saveFile({ tempFilePath: path, success: result => resolve(result.savedFilePath), fail: () => resolve(path) }))
-  },
-  async upload(path) {
-    const reservation = await api.request('media.reserve', { extension: 'png' })
-    const fileId = await new Promise((resolve, reject) => wx.cloud.uploadFile({
-      cloudPath: reservation.cloudPath, filePath: path,
-      success: result => resolve(result.fileID), fail: () => reject(new Error('头像上传失败，请检查网络后重试'))
-    }))
-    await api.request('media.complete', { id: reservation.id, fileId })
-    return reservation.id
-  },
+  previewImage() { if (this.data.frames.length) this.setData({ previewOpen: true }) },
+  closePreview() { this.setData({ previewOpen: false }) },
   async save() {
     if (this.data.saving || !this.data.frames.length) return
     this.setData({ saving: true, error: '' })
     try {
       const profile = this.profile || await api.request('user.me')
       if (!profile?.nickname) throw new Error('请先在“我的”填写昵称')
-      let avatarFrameMediaIds
-      if (api.config.demoMode) avatarFrameMediaIds = await Promise.all(this.data.frames.map(path => this.saveFile(path)))
-      else avatarFrameMediaIds = await Promise.all(this.data.frames.map(path => this.upload(path)))
-      await api.request('user.save', {
-        nickname: profile.nickname, avatarKey: profile.avatarKey || 'mika',
-        tags: profile.tags || [], avatarMediaId: avatarFrameMediaIds[0], avatarFrameMediaIds
-      })
-      getApp().globalData.presenceDirty = true
+      if (!this.libraryEntry) this.libraryEntry = await library.add(this.data.frames, this.data.avatarName)
+      library.rename(this.libraryEntry.id, this.data.avatarName)
+      await library.activate(this.libraryEntry, profile)
       wx.showToast({ title: '动漫形象已保存', icon: 'none' })
-      setTimeout(() => { if (getCurrentPages().length > 1) wx.navigateBack(); else wx.reLaunch({ url: '/pages/me/index' }) }, 500)
+      setTimeout(() => { if (getCurrentPages().length > 1) wx.navigateBack(); else navigate('profile') }, 500)
     } catch (error) { if (!this.disposed) this.setData({ error: error.message }) }
     finally { if (!this.disposed) this.setData({ saving: false }) }
   }

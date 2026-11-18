@@ -1,10 +1,22 @@
 {
-  "pages": ["pages/index/index", "pages/activities/index", "pages/publish/index", "pages/notifications/index", "pages/me/index", "pages/avatar/index", "pages/detail/index", "pages/about/index", "pages/admin/index"],
+  "pages": ["pages/index/index", "pages/activities/index", "pages/publish/index", "pages/notifications/index", "pages/me/index", "pages/profile-settings/index", "pages/avatar/index", "pages/detail/index", "pages/about/index", "pages/admin/index"],
   "window": {
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#f4f4f2",
     "backgroundColor": "#f4f4f2"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8a8a82",
+    "selectedColor": "#1c1c1a",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/activities/index", "text": "服务" },
+      { "pagePath": "pages/notifications/index", "text": "消息" },
+      { "pagePath": "pages/me/index", "text": "我的" }
+    ]
   },
   "permission": {
     "scope.userLocation": { "desc": "用于定位到当前位置、选择你确认的公开地点，并展示附近内容" }

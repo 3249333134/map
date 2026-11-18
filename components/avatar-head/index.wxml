@@ -1,0 +1,2 @@
+<canvas type="2d" id="crop" class="crop-canvas" />
+<image src="{{portrait || src}}" class="head-image" mode="aspectFit" />
